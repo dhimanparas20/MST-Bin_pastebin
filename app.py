@@ -40,7 +40,8 @@ class SavePaste(Resource):
             'key': key,
             'data': data,
             'created_at': datetime.now(),
-            'ip_address': user_ip
+            'ip_address': user_ip,
+            'open_count': 0
         }
         pastes_collection.insert_one(paste)
         return {'url': f'{request.host_url}{key}'}, 201
@@ -49,10 +50,13 @@ class SavePaste(Resource):
 class GetPaste(Resource):
     def get(self, key):
         paste = pastes_collection.find_one({'key': key})
+        print(paste)
         if not paste:
             return {'error': 'Paste not found or Deleted'}, 404
-
+        # Increment the open_count value by one atomically
+        pastes_collection.update_one({'key': key}, {'$inc': {'open_count': 1}})
         return make_response(render_template('paste.html', paste=paste['data']))
+
 
 # Resource for rendering the homepage
 class Index(Resource):
