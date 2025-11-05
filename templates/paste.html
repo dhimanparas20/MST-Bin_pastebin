@@ -10,16 +10,16 @@
 </head>
 <body class="bg-black text-white flex flex-col min-h-screen">
     <nav class="glassmorphism fixed top-0 left-0 right-0 z-50">
-        <div class="container mx-auto px-6 py-3 flex justify-between items-center">
-            <a href="/" class="text-2xl font-bold flex items-center">
+        <div class="container mx-auto px-4 sm:px-6 py-3 flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
+            <a href="/" class="text-2xl font-bold flex items-center w-full sm:w-auto justify-center sm:justify-start">
                 <img src="{{ static_base_url }}/img/logo.jpeg" alt="MST Bin Logo" class="h-8 mr-2">
                 MST Bin
                 <span class="ml-4 text-blue-300 font-semibold text-lg" style="white-space:nowrap;">{{ heading }}</span>
             </a>
-            <h6>[Auto delete after 1 week]</h6>
-            <div class="flex items-center space-x-4">
+            <h6 class="text-sm text-gray-300 w-full text-center sm:w-auto sm:text-left">[Auto delete after 1 week]</h6>
+            <div class="flex flex-col sm:flex-row items-center w-full sm:w-auto space-y-2 sm:space-y-0 sm:space-x-4 mt-2 sm:mt-0">
                 <!-- Copy Button -->
-                <button id="copyContentBtn" title="Copy Content" class="text-white hover:text-blue-300 focus:outline-none">
+                <button id="copyContentBtn" title="Copy Content" class="text-white hover:text-blue-300 focus:outline-none flex justify-center">
                     <!-- Clipboard Icon SVG -->
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
@@ -37,7 +37,7 @@
                     <span id="viewCount" class="text-sm">{{ open_count }}</span>
                 </span>
                 <!-- Plus Icon -->
-                <a href="/" title="New Paste" class="text-white hover:text-blue-300">
+                <a href="/" title="New Paste" class="text-white hover:text-blue-300 flex justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
@@ -46,19 +46,15 @@
         </div>
     </nav>
 
-    <div class="container mx-auto px-6 pt-24 flex-grow">
-<!--        <div class="text-center mb-6">-->
-<!--            <h1 class="text-3xl font-bold text-blue-300">{{ heading }}</h1>-->
-<!--        </div>-->
-
-        <div class="flex">
-            <div id="lineNumbers" class="pr-4 text-gray-500 select-none"></div>
-            <pre id="pasteContent" class="whitespace-pre-wrap flex-grow">{{ paste }}</pre>
+    <div class="container mx-auto px-4 sm:px-6 pt-24 flex-grow">
+        <div class="flex flex-col sm:flex-row w-full overflow-x-auto">
+            <div id="lineNumbers" class="pr-2 text-gray-500 select-none text-xs sm:text-base"></div>
+            <pre id="pasteContent" class="whitespace-pre-wrap flex-grow text-xs sm:text-base overflow-x-auto">{{ paste }}</pre>
         </div>
     </div>
 
-    <footer class="glassmorphism mt-8 py-4">
-        <div class="container mx-auto px-6 text-center">
+    <footer class="glassmorphism mt-8 py-4 text-sm">
+        <div class="container mx-auto px-4 sm:px-6 text-center">
             <p>&copy; 2025 MST Services. All rights reserved.</p>
         </div>
     </footer>
