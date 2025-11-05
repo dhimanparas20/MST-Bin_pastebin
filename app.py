@@ -55,7 +55,7 @@ class GetPaste(Resource):
             return {'error': 'Paste not found or Deleted'}, 404
         # Increment the open_count value by one atomically
         pastes_collection.update_one({'key': key}, {'$inc': {'open_count': 1}})
-        return make_response(render_template('paste.html', paste=paste['data']))
+        return make_response(render_template('paste.html', paste=paste['data'],open_count=paste['open_count']))
 
 
 # Resource for rendering the homepage
