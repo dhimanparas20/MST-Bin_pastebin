@@ -15,11 +15,22 @@
                 <img src="{{ url_for('static', filename='img/logo.jpeg') }}" alt="MST Bin Logo" class="h-8 mr-2">
                 MST Bin
             </a>
-            <a href="/" title="New Paste" class="text-white hover:text-blue-300">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
-            </a>
+            <div class="flex items-center space-x-4">
+                <!-- Copy Button -->
+                <button id="copyContentBtn" title="Copy Content" class="text-white hover:text-blue-300 focus:outline-none">
+                    <!-- Clipboard Icon SVG -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
+                        <rect x="3" y="3" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
+                    </svg>
+                </button>
+                <!-- Plus Icon -->
+                <a href="/" title="New Paste" class="text-white hover:text-blue-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                </a>
+            </div>
         </div>
     </nav>
 
@@ -37,15 +48,24 @@
     </footer>
 
     <script>
-        // Copy URL to clipboard
-        navigator.clipboard.writeText(window.location.href).then(() => {
-            console.log('URL copied to clipboard');
-        }).catch(err => {
-            console.error('Failed to copy URL: ', err);
-        });
+        // Function to copy paste content to clipboard
+        function copyPasteContent() {
+            const pasteContent = document.getElementById('pasteContent');
+            // Use innerText to preserve formatting
+            const text = pasteContent.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                // Optional: show feedback
+                // alert('Content copied!');
+            }).catch(err => {
+                console.error('Failed to copy content: ', err);
+            });
+        }
 
-        // Add line numbers
+        // Copy content on page load
         document.addEventListener('DOMContentLoaded', () => {
+            copyPasteContent();
+
+            // Add line numbers
             const pasteContent = document.getElementById('pasteContent');
             const lineNumbers = document.getElementById('lineNumbers');
 
@@ -60,6 +80,9 @@
             pasteContent.addEventListener('scroll', () => {
                 lineNumbers.scrollTop = pasteContent.scrollTop;
             });
+
+            // Copy button event
+            document.getElementById('copyContentBtn').addEventListener('click', copyPasteContent);
         });
     </script>
 </body>
