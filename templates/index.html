@@ -20,11 +20,6 @@
                 </a>
             </div>
 
-            <!-- Subtitle -->
-            <div class="hidden sm:flex items-center">
-                <h6 class="text-xs sm:text-sm text-gray-300">[Auto delete after 1 week]</h6>
-            </div>
-
             <!-- Input and Buttons -->
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                 <input
@@ -46,10 +41,11 @@
         </div>
     </nav>
 
+    <!-- Fixed main content to properly account for navbar and prevent overflow -->
     <main id="mainContent" class="flex-grow w-full overflow-hidden">
-        <div class="flex h-full flex-col sm:flex-row w-full">
-            <div id="lineNumbers" class="pr-2 text-gray-500 select-none text-xs sm:text-base font-mono overflow-hidden flex-shrink-0"></div>
-            <textarea id="pasteArea" class="flex-grow bg-black text-white resize-none outline-none text-xs sm:text-base font-mono" wrap="off"></textarea>
+        <div class="flex h-full w-full">
+            <div id="lineNumbers" class="text-gray-500 select-none font-mono"></div>
+            <textarea id="pasteArea" class="flex-grow bg-black text-white resize-none outline-none font-mono" wrap="off"></textarea>
         </div>
     </main>
 
@@ -66,7 +62,7 @@
             const navbar = document.getElementById('navbar');
             const mainContent = document.getElementById('mainContent');
             const navHeight = navbar.offsetHeight;
-            mainContent.style.paddingTop = navHeight + 'px';
+            mainContent.style.marginTop = navHeight + 'px';
         }
 
         window.addEventListener('load', updateMainPadding);

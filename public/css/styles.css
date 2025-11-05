@@ -17,15 +17,24 @@ body {
   font-family: "Courier New", monospace;
   line-height: 1.5;
   padding: 8px;
+  /* Ensure textarea doesn't have min-width issues */
+  min-width: 0;
 }
 
 #lineNumbers {
   font-family: "Courier New", monospace;
   line-height: 1.5;
   text-align: right;
-  padding-right: 10px;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
   overflow-y: hidden;
+  overflow-x: hidden;
+  /* Use flex-col to properly stack line numbers as divs */
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: auto;
+  min-width: 2.5rem;
+  padding-right: 0;
 }
 
 footer {
@@ -54,14 +63,23 @@ html {
   #pasteArea,
   #pasteContent {
     padding: 6px !important;
+    font-size: 12px;
   }
 
+  /* Tighter line numbers on mobile to save space --> */
   #lineNumbers {
-    padding-right: 6px;
+    min-width: 1.75rem;
+    font-size: 11px;
   }
 
   body {
     font-size: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  #lineNumbers {
+    width: 2.25rem;
   }
 }
 
@@ -75,4 +93,13 @@ main > div {
   display: flex;
   height: 100%;
   overflow: hidden;
+  /* Ensure width is constrained on mobile */
+  width: 100%;
+}
+
+/* Ensure line numbers scroll syncs perfectly */
+#lineNumbers {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 }

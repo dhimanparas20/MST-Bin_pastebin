@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const lines = pasteArea.value.split("\n").length
     lineNumbers.innerHTML = Array(lines)
       .fill(0)
-      .map((_, i) => `${i + 1}<br>`)
+      .map((_, i) => `<div style="height: 1.5em;">${i + 1}</div>`)
       .join("")
   }
 
@@ -59,17 +59,4 @@ document.addEventListener("DOMContentLoaded", () => {
       savePaste()
     }
   })
-
-  // Dynamically adjust main content padding based on navbar height
-  function updateMainPadding() {
-    const navbar = document.getElementById("navbar")
-    const mainContent = document.getElementById("mainContent")
-    if (navbar && mainContent) {
-      const navHeight = navbar.offsetHeight
-      mainContent.style.paddingTop = navHeight + "px"
-    }
-  }
-
-  updateMainPadding()
-  window.addEventListener("resize", updateMainPadding)
 })
