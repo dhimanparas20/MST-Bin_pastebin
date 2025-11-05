@@ -31,6 +31,7 @@ def generate_key():
 class SavePaste(Resource):
     def post(self):
         data = request.json.get('data', '')
+        user_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
         if not data:
             return {'error': 'No data provided'}, 400
 
@@ -38,7 +39,8 @@ class SavePaste(Resource):
         paste = {
             'key': key,
             'data': data,
-            'created_at': datetime.now()
+            'created_at': datetime.now(),
+            'ip_address': user_ip
         }
         pastes_collection.insert_one(paste)
         return {'url': f'{request.host_url}{key}'}, 201
