@@ -9,11 +9,28 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Slide-in sidebar (right side) */
+.glassmorphism-sidebar {
+  background: rgba(10, 10, 20, 0.97);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Password modal */
+.glassmorphism-modal {
+  background: rgba(20, 20, 30, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
 .font-mono {
   font-family: "Courier New", monospace;
 }
 
-/* CodeMirror overrides - full height, black background */
+/* CodeMirror overrides */
 .CodeMirror {
   height: 100% !important;
   background: #000 !important;
@@ -157,12 +174,39 @@ footer {
   display: inline;
 }
 
-/* Smooth scrolling and better defaults */
+/* Smooth scrolling */
 html {
   scroll-behavior: smooth;
 }
 
-/* Better responsive typography and spacing */
+/* Sidebar scrollbar styling */
+#sidePanel::-webkit-scrollbar {
+  width: 4px;
+}
+#sidePanel::-webkit-scrollbar-track {
+  background: transparent;
+}
+#sidePanel::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+}
+
+/* Paste not found animation */
+.animate-fadeIn {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Main content transitions */
+#mainContent {
+  transition: margin-right 0.3s ease-in-out;
+}
+
+/* Better responsive typography */
 @media (max-width: 640px) {
   #pasteArea,
   #pasteContent {
@@ -203,7 +247,7 @@ main > div {
   width: 100%;
 }
 
-/* Ensure line numbers scroll syncs perfectly */
+/* Line numbers alignment */
 #lineNumbers {
   display: flex;
   flex-direction: column;

@@ -12,90 +12,186 @@
     <link rel="icon" type="image/png" href="{{ static_base_url }}/img/favicon.ico">
 </head>
 <body class="bg-black text-white flex flex-col min-h-screen">
-    <nav id="navbar" class="glassmorphism fixed top-0 left-0 right-0 z-50 w-full">
-        <div class="flex flex-col sm:flex-row justify-between items-stretch w-full px-3 sm:px-6 py-2 sm:py-3 gap-2 sm:gap-4">
-            <!-- Logo and Title -->
-            <div class="flex items-center justify-center sm:justify-start flex-shrink-0">
-                <a href="/" class="text-lg sm:text-2xl font-bold flex items-center">
-                    <img src="{{ static_base_url }}/img/logo.jpeg" alt="MST Bin Logo" class="h-6 sm:h-8 mr-2">
-                    <span class="hidden sm:inline">MST Bin</span>
-                    <span class="sm:hidden">MST</span>
-                </a>
+    <!-- Sidebar Overlay (mobile) -->
+    <div id="sidebarOverlay" class="fixed inset-0 z-30 bg-black bg-opacity-60 hidden transition-opacity duration-300" style="backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);"></div>
+
+    <!-- Left Side Panel -->
+    <aside id="sidePanel" class="fixed top-12 sm:top-14 bottom-0 right-0 z-40 w-72 glassmorphism-sidebar transition-transform duration-300 ease-in-out overflow-y-auto overflow-x-hidden flex flex-col" style="transform:translateX(100%);">
+        <div class="p-4 space-y-4 flex-shrink-0">
+            <!-- Section: Basics -->
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1 ml-1">Title</label>
+                    <input id="pasteHeading" type="text" maxlength="20" placeholder="My Paste"
+                        class="w-full bg-gray-800 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1 ml-1">Custom ID <span class="text-gray-600">(optional, 4-20)</span></label>
+                    <input id="customKey" type="text" minlength="4" maxlength="20" placeholder="my-cool-paste"
+                        class="w-full bg-gray-800 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1 ml-1">Load Paste by ID</label>
+                    <div class="flex gap-2">
+                        <input id="loadPasteKey" type="text" placeholder="paste ID"
+                            class="flex-1 bg-gray-800 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                        <button id="loadPasteBtn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-4 py-2 rounded text-sm whitespace-nowrap">Go</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1 ml-1">Language</label>
+                    <select id="languageSelect" class="w-full bg-gray-800 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        <option value="auto">Auto Detect</option>
+                        <option value="plaintext">Plain Text</option>
+                        <option value="python">Python</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="typescript">TypeScript</option>
+                        <option value="html">HTML</option>
+                        <option value="css">CSS</option>
+                        <option value="json">JSON</option>
+                        <option value="bash">Bash</option>
+                        <option value="c">C</option>
+                        <option value="cpp">C++</option>
+                        <option value="csharp">C#</option>
+                        <option value="java">Java</option>
+                        <option value="go">Go</option>
+                        <option value="rust">Rust</option>
+                        <option value="sql">SQL</option>
+                        <option value="yaml">YAML</option>
+                        <option value="xml">XML</option>
+                        <option value="markdown">Markdown</option>
+                        <option value="php">PHP</option>
+                        <option value="ruby">Ruby</option>
+                        <option value="kotlin">Kotlin</option>
+                        <option value="swift">Swift</option>
+                        <option value="lua">Lua</option>
+                        <option value="perl">Perl</option>
+                        <option value="dockerfile">Dockerfile</option>
+                        <option value="nginx">Nginx</option>
+                    </select>
+                </div>
             </div>
 
-            <!-- Input and Buttons -->
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-                <input
-                    id="pasteHeading"
-                    type="text"
-                    maxlength="20"
-                    placeholder="title: optional"
-                    class="bg-gray-800 text-white rounded px-2 py-1.5 text-xs sm:text-sm flex-grow sm:flex-grow-0 sm:w-40 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                >
-                <input
-                    id="customKey"
-                    type="text"
-                    minlength="4"
-                    maxlength="20"
-                    placeholder="custom ID (4-20 chars)"
-                    class="bg-gray-800 text-white rounded px-2 py-1.5 text-xs sm:text-sm flex-grow sm:flex-grow-0 sm:w-36 focus:outline-none focus:ring-2 focus:ring-green-400"
-                >
-                <select
-                    id="languageSelect"
-                    class="bg-gray-800 text-white rounded px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                >
-                    <option value="auto">Auto Detect</option>
-                    <option value="plaintext">Plain Text</option>
-                    <option value="python">Python</option>
-                    <option value="javascript">JavaScript</option>
-                    <option value="typescript">TypeScript</option>
-                    <option value="html">HTML</option>
-                    <option value="css">CSS</option>
-                    <option value="json">JSON</option>
-                    <option value="bash">Bash</option>
-                    <option value="c">C</option>
-                    <option value="cpp">C++</option>
-                    <option value="csharp">C#</option>
-                    <option value="java">Java</option>
-                    <option value="go">Go</option>
-                    <option value="rust">Rust</option>
-                    <option value="sql">SQL</option>
-                    <option value="yaml">YAML</option>
-                    <option value="xml">XML</option>
-                    <option value="markdown">Markdown</option>
-                    <option value="php">PHP</option>
-                    <option value="ruby">Ruby</option>
-                    <option value="kotlin">Kotlin</option>
-                    <option value="swift">Swift</option>
-                    <option value="lua">Lua</option>
-                    <option value="perl">Perl</option>
-                    <option value="dockerfile">Dockerfile</option>
-                    <option value="nginx">Nginx</option>
-                </select>
-                <button id="saveBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1.5 px-3 rounded text-xs sm:text-sm whitespace-nowrap">
-                    Save (Ctrl+S)
+            <!-- Divider -->
+            <hr class="border-gray-700">
+
+            <!-- Section: Lock -->
+            <div>
+                <button id="lockToggleSide" class="flex items-center justify-between w-full text-left text-sm text-gray-300 hover:text-white py-1 focus:outline-none group">
+                    <span class="flex items-center gap-2">
+                        <svg id="lockIconUnlockedSide" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                        </svg>
+                        <svg id="lockIconLockedSide" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 hidden text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        <span>Lock with password</span>
+                    </span>
+                    <span id="lockStatusSide" class="text-xs text-gray-500">off</span>
                 </button>
-                <div class="flex items-center gap-1">
-                    <input
-                        id="loadPasteKey"
-                        type="text"
-                        placeholder="paste ID"
-                        class="bg-gray-800 text-white rounded px-2 py-1.5 text-xs sm:text-sm w-20 sm:w-24 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                    >
-                    <button id="loadPasteBtn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-1.5 px-2 rounded text-xs sm:text-sm whitespace-nowrap">
-                        Go
-                    </button>
+                <div id="passwordSection" class="hidden mt-2 space-y-2">
+                    <div class="relative">
+                        <input id="pastePassword" type="password" maxlength="128" placeholder="enter password"
+                            class="w-full bg-gray-800 text-white rounded px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
+                        <button id="togglePassVis" type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-1 focus:outline-none">
+                            <svg id="eyeOffIcon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                            <svg id="eyeOnIcon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
-                <a href="/" title="New Paste" class="text-white hover:text-blue-300 flex justify-center items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                </a>
+            </div>
+
+            <!-- Section: Expiry -->
+            <div>
+                <button id="expiryToggleSide" class="flex items-center justify-between w-full text-left text-sm text-gray-300 hover:text-white py-1 focus:outline-none group">
+                    <span class="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Auto-delete</span>
+                    </span>
+                    <span id="expiryStatusSide" class="text-xs text-gray-500">off</span>
+                </button>
+                <div id="expirySection" class="hidden mt-2 space-y-2">
+                    <div class="flex gap-2">
+                        <input id="expiryValue" type="number" min="1" value="1"
+                            class="w-20 bg-gray-800 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        <select id="expiryUnit" class="flex-1 bg-gray-800 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            <option value="seconds">Seconds</option>
+                            <option value="minutes">Minutes</option>
+                            <option value="hours">Hours</option>
+                            <option value="days" selected>Days</option>
+                            <option value="weeks">Weeks</option>
+                            <option value="months">Months</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: View Once -->
+            <div>
+                <button id="viewOnceToggleSide" class="flex items-center justify-between w-full text-left text-sm text-gray-300 hover:text-white py-1 focus:outline-none group">
+                    <span class="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        <span>View once</span>
+                    </span>
+                    <span id="viewOnceStatusSide" class="text-xs text-gray-500">off</span>
+                </button>
             </div>
         </div>
+
+        <!-- Save button at bottom of sidebar -->
+        <div class="p-4 mt-auto border-t border-gray-700">
+            <button id="saveBtnSide" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2.5 rounded text-sm transition-colors">
+                Save (Ctrl+S)
+            </button>
+        </div>
+    </aside>
+
+    <!-- Top Navbar -->
+    <nav id="navbar" class="glassmorphism fixed top-0 left-0 right-0 z-50 h-12 sm:h-14 flex items-center px-3 sm:px-4 gap-3">
+        <!-- Logo -->
+        <a href="/" class="flex items-center gap-2 flex-shrink-0">
+            <img src="{{ static_base_url }}/img/logo.jpeg" alt="MST Bin Logo" class="h-6 sm:h-8">
+            <span class="text-lg sm:text-2xl font-bold hidden sm:inline">MST Bin</span>
+            <span class="text-lg font-bold sm:hidden">MST</span>
+        </a>
+
+        <div class="flex-1"></div>
+
+        <!-- Save button in navbar (visible when sidebar closed or mobile) -->
+        <button id="saveBtnTop" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1.5 px-4 rounded text-xs sm:text-sm whitespace-nowrap hidden">Save</button>
+
+        <!-- New paste -->
+        <a href="/" title="New Paste" class="text-white hover:text-blue-300 flex justify-center items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+        </a>
+
+        <!-- Hamburger (right side) -->
+        <button id="hamburgerBtn" class="p-1 text-white hover:text-blue-300 focus:outline-none flex-shrink-0" title="Menu">
+            <svg id="hamburgerIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+            <svg id="hamburgerCloseIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
     </nav>
 
-    <!-- Fixed main content to properly account for navbar and prevent overflow -->
+    <!-- Main Editor -->
     <main id="mainContent" class="flex-grow w-full overflow-hidden">
         <div class="flex h-full w-full" id="editorContainer">
             <div id="lineNumbers" class="text-gray-500 select-none font-mono"></div>
@@ -126,12 +222,10 @@
     <script src="{{ static_base_url }}/js/script.js"></script>
     <script>
         function updateMainPadding() {
-            const navbar = document.getElementById('navbar');
-            const mainContent = document.getElementById('mainContent');
-            const navHeight = navbar.offsetHeight;
-            mainContent.style.marginTop = navHeight + 'px';
+            var navbar = document.getElementById('navbar');
+            var mainContent = document.getElementById('mainContent');
+            mainContent.style.paddingTop = navbar.offsetHeight + 'px';
         }
-
         window.addEventListener('load', updateMainPadding);
         window.addEventListener('resize', updateMainPadding);
         document.addEventListener('DOMContentLoaded', updateMainPadding);

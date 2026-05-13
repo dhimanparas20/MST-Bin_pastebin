@@ -18,10 +18,12 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 - 🎨 **Live syntax highlighting** in the editor (CodeMirror 5 + monokai theme)
 - 🔍 **Auto language detection** — paste code and language is automatically identified
 - 🔑 **Custom paste keys** — choose your own memorable key (4-20 chars, optional, checked for uniqueness)
-- 🔎 **Load paste by ID** — quickly open any paste by entering its key
+- 🔒 **Password-protected pastes** — lock pastes with a password, viewer must enter password via glassmorphism modal
+- ⏱ **Auto-delete** — set expiry in seconds/minutes/hours/days/weeks/months, lazy deletion on access
+- 👁 **View-once pastes** — paste auto-deletes after first view
+- 🔎 **Load paste by ID** — quickly open any paste by entering its key on any page
 - 🏷️ **Language selector** — 25+ languages (Python, JS, Go, Rust, SQL, YAML, Dockerfile, etc.)
-- 📝 Line numbers
-- ⌨️ Keyboard shortcuts (Ctrl+S to save, Ctrl+A selects only paste content)
+- 📱 **Responsive hamburger sidebar** — all settings in a left panel, auto-open on desktop, drawer on mobile
 - 🔄 One-click copy button on paste view
 - 📏 **Size limit** — configurable max paste size (default 10,000 chars)
 - 🗜️ **Gzip compression** on all HTML/JSON responses > 500 bytes
@@ -112,5 +114,6 @@ Exposes on port 80 → internal 5000 via Gunicorn (4 workers).
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/` | Editor homepage |
-| `POST` | `/api/save` | Save a paste `{"data":"...", "heading":"...", "language":"python", "custom_key":"my-key"}` (custom_key optional, 4-20 chars a-zA-Z0-9_-) |
-| `GET` | `/<key>` | View a paste with syntax highlighting |
+| `POST` | `/api/save` | Save a paste. Body: `{data, heading, language, custom_key?, password?, expiry_value?, expiry_unit?, view_once?}` |
+| `GET` | `/<key>` | View a paste. If locked shows password modal. If expired/viewed-once shows beautiful 404 |
+| `POST` | `/api/access/<key>` | Unlock a protected paste `{password}`. Returns paste data or 403 |
