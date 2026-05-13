@@ -104,9 +104,9 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - Custom line numbers (`#lineNumbers`) synced with pasteContent scroll
 - **Password modal**: glassmorphism overlay with blur backdrop, password input with eye toggle, POST to `/api/access/<key>`
 - **Paste ID nav**: input + Go button in navbar to navigate to another paste, `/` key shortcut to focus
-- **Paste not found**: beautiful animated page with large "?" icon, message, and "Create New Paste" button
-- **Expiry display**: shows "Expires in X days/hours" in navbar when applicable
-- **View-once indicator**: "1" badge in navbar
+- **Paste not found**: clean centered page with file icon, "Not Found" heading, paste key display, purple "Create New Paste" button
+- **Expiry display**: shows "Expires in X days/hours/mins/secs" in navbar when applicable
+- **View-once indicator**: bold `VIEW ONCE` pill badge in navbar + floating warning banner near content
 - **Ctrl+A handled**: prevents browser default, selects only `#pasteContent` contents
 - Copy button uses `pasteContent.innerText` (raw text, no HTML)
 
@@ -129,12 +129,15 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - **Sidebar responsive**: auto-opens on desktop (>=640px), closed on mobile, overlay backdrop on mobile
 
 ### `public/css/styles.css`
-- CodeMirror overrides: black background `#000`, monospace font, custom gutter colors
+- **Dark violet gradient body**: `#08000f` base with 3 radial purple glows + `bgPulse` animation (12s alternate)
+- CodeMirror overrides: dark purple `#07000d` background, `#0a0014` gutters, monospace font
 - CodeMirror selection: blue tint when focused, white tint otherwise
-- highlight.js overrides: black background, monokai color palette
-- Modal glassmorphism: `backdrop-filter: blur(16px)`, semi-transparent bg, box shadow
-- Sidebar glassmorphism: dark bg, blur, border-left
+- highlight.js overrides: dark purple `#07000d` background, monokai color palette
+- Modal glassmorphism: `backdrop-filter: blur(16px)`, purple-tinted semi-transparent bg, box shadow
+- Sidebar glassmorphism: dark purple bg, blur, border-left (right-side panel)
+- Glassmorphism navbar/footer: `rgba(20,10,35,0.4)` with blur(10px)
 - Paste not found `fadeInUp` animation
+- Sidebar scrollbar custom styling
 - All responsive breakpoints at 640px and 768px
 
 ## Coding Conventions

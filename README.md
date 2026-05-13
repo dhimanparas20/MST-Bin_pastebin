@@ -6,7 +6,7 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 
 ### Homepage
 ![Homepage](static/img/ss1.png)
-*Homepage with dark theme, CodeMirror syntax-highlighted editor, and language selector*
+*Homepage with dark violet gradient, CodeMirror syntax-highlighted editor, and sidebar controls*
 
 ### Paste View
 ![Paste View](static/img/ss2.png)
@@ -14,16 +14,16 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 
 ## Features
 
-- 🌙 Dark theme interface
+- 🌙 Dark violet gradient theme with animated background
 - 🎨 **Live syntax highlighting** in the editor (CodeMirror 5 + monokai theme)
 - 🔍 **Auto language detection** — paste code and language is automatically identified
 - 🔑 **Custom paste keys** — choose your own memorable key (4-20 chars, optional, checked for uniqueness)
 - 🔒 **Password-protected pastes** — lock pastes with a password, viewer must enter password via glassmorphism modal
-- ⏱ **Auto-delete** — set expiry in seconds/minutes/hours/days/weeks/months, lazy deletion on access
-- 👁 **View-once pastes** — paste auto-deletes after first view
+- ⏱ **Auto-delete** — set expiry in seconds to months, lazy deletion on access (no scheduler)
+- 👁 **View-once pastes** — paste auto-deletes after first view, "VIEW ONCE" warning shown
 - 🔎 **Load paste by ID** — quickly open any paste by entering its key on any page
 - 🏷️ **Language selector** — 25+ languages (Python, JS, Go, Rust, SQL, YAML, Dockerfile, etc.)
-- 📱 **Responsive hamburger sidebar** — all settings in a left panel, auto-open on desktop, drawer on mobile
+- 📱 **Responsive hamburger sidebar** — all settings in a right-side panel, auto-open on desktop, drawer on mobile
 - 🔄 One-click copy button on paste view
 - 📏 **Size limit** — configurable max paste size (default 10,000 chars)
 - 🗜️ **Gzip compression** on all HTML/JSON responses > 500 bytes
