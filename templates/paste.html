@@ -52,6 +52,12 @@
                         <rect x="9" y="3" width="6" height="4" rx="1" />
                     </svg>
                 </button>
+                <button id="copyShareUrl" title="Copy share URL" class="text-purple-300 hover:text-white focus:outline-none flex justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                </button>
+                <span id="copyToast" class="hidden fixed top-16 left-1/2 -translate-x-1/2 bg-purple-600 text-white text-xs px-4 py-2 rounded-lg z-50 whitespace-nowrap" style="box-shadow:0 4px 12px rgba(0,0,0,0.4);">Copied!</span>
                 {% endif %}
                 <span class="flex items-center text-purple-300 text-xs sm:text-sm gap-1">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5" fill="currentColor" viewBox="0 0 16 16">
@@ -278,6 +284,20 @@
                 if (copyBtn) {
                     copyBtn.addEventListener('click', function() {
                         navigator.clipboard.writeText(pasteContent ? pasteContent.innerText : '').catch(function() {});
+                    });
+                }
+
+                var shareBtn = document.getElementById('copyShareUrl');
+                var shareToast = document.getElementById('copyToast');
+                if (shareBtn) {
+                    shareBtn.addEventListener('click', function() {
+                        var cleanUrl = window.location.origin + '/' + PASTE_KEY;
+                        navigator.clipboard.writeText(cleanUrl).then(function() {
+                            if (shareToast) {
+                                shareToast.classList.remove('hidden');
+                                setTimeout(function() { shareToast.classList.add('hidden'); }, 1800);
+                            }
+                        }).catch(function() {});
                     });
                 }
 
