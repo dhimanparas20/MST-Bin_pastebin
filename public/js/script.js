@@ -3,6 +3,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const lineNumbers = document.getElementById("lineNumbers")
   const saveBtn = document.getElementById("saveBtn")
   const languageSelect = document.getElementById("languageSelect")
+  const customKeyInput = document.getElementById("customKey")
+  const loadPasteKey = document.getElementById("loadPasteKey")
+  const loadPasteBtn = document.getElementById("loadPasteBtn")
 
   const MODE_MAP = {
     plaintext: null,
@@ -154,6 +157,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const data = editor.getValue()
     const headingInput = document.getElementById("pasteHeading")
     let heading = headingInput.value.trim()
+    const customKey = customKeyInput.value.trim()
 
     if (!data.trim()) {
       alert("Please enter some text before saving.")
@@ -162,18 +166,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!heading) heading = "My Paste"
 
+    // client-side validation for custom key
+    if (customKey && !/^[a-zA-Z0-9_-]{4,20}$/.test(customKey)) {
+      alert("Custom key must be 4-20 characters using a-z, A-Z, 0-9, -, _")
+      return
+    }
+
     let lang = currentLanguage
     if (lang === "auto") {
       const detected = detectLanguage(data)
       lang = detected || "plaintext"
     }
 
+    const body = { data, heading, language: lang }
+    if (customKey) body.custom_key = customKey
+
     fetch("/api/save", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ data, heading, language: lang }),
+      body: JSON.stringify(body),
     })
       .then((response) => response.json())
       .then((result) => {
@@ -190,6 +203,20 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   saveBtn.addEventListener("click", savePaste)
+
+  function loadPaste() {
+    const key = loadPasteKey.value.trim()
+    if (!key) return
+    window.location.href = "/" + encodeURIComponent(key)
+  }
+
+  loadPasteBtn.addEventListener("click", loadPaste)
+  loadPasteKey.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      loadPaste()
+    }
+  })
 
   document.addEventListener("keydown", (e) => {
     if (e.ctrlKey && e.key === "s") {

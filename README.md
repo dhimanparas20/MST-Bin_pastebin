@@ -17,6 +17,8 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 - 🌙 Dark theme interface
 - 🎨 **Live syntax highlighting** in the editor (CodeMirror 5 + monokai theme)
 - 🔍 **Auto language detection** — paste code and language is automatically identified
+- 🔑 **Custom paste keys** — choose your own memorable key (4-20 chars, optional, checked for uniqueness)
+- 🔎 **Load paste by ID** — quickly open any paste by entering its key
 - 🏷️ **Language selector** — 25+ languages (Python, JS, Go, Rust, SQL, YAML, Dockerfile, etc.)
 - 📝 Line numbers
 - ⌨️ Keyboard shortcuts (Ctrl+S to save, Ctrl+A selects only paste content)
@@ -110,5 +112,5 @@ Exposes on port 80 → internal 5000 via Gunicorn (4 workers).
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/` | Editor homepage |
-| `POST` | `/api/save` | Save a paste `{"data":"...", "heading":"...", "language":"python"}` |
+| `POST` | `/api/save` | Save a paste `{"data":"...", "heading":"...", "language":"python", "custom_key":"my-key"}` (custom_key optional, 4-20 chars a-zA-Z0-9_-) |
 | `GET` | `/<key>` | View a paste with syntax highlighting |

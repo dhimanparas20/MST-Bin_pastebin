@@ -2,6 +2,7 @@ import gzip
 import io
 import os
 import random
+import re
 import string
 import time
 from datetime import datetime, timedelta
@@ -71,7 +72,11 @@ pastes_collection = db[os.getenv("MONGO_COLLECTION_NAME", "pastes")]
 
 def generate_key():
     key_length = int(os.getenv("KEY_LENGTH", "6"))
-    return "".join(random.choices(string.ascii_letters + string.digits, k=key_length))
+    chars = string.ascii_letters + string.digits
+    while True:
+        key = "".join(random.choices(chars, k=key_length))
+        if not pastes_collection.find_one({"key": key}):
+            return key
 
 
 class SavePaste(Resource):
@@ -79,6 +84,7 @@ class SavePaste(Resource):
         data = request.json.get("data", "")
         heading = request.json.get("heading", "My Paste").strip() or "My Paste"
         language = request.json.get("language", "plaintext").strip() or "plaintext"
+        custom_key = request.json.get("custom_key", "").strip()
         user_ip = request.headers.get("X-Forwarded-For", request.remote_addr)
 
         if not data:
@@ -87,7 +93,15 @@ class SavePaste(Resource):
         if len(data) > MAX_PASTE_SIZE:
             return {"error": f"Paste exceeds maximum size of {MAX_PASTE_SIZE} characters"}, 400
 
-        key = generate_key()
+        if custom_key:
+            if not re.match(r'^[a-zA-Z0-9_-]{4,20}$', custom_key):
+                return {"error": "Custom key must be 4-20 characters (a-z, A-Z, 0-9, -, _)"}, 400
+            if pastes_collection.find_one({"key": custom_key}):
+                return {"error": "This custom key is already taken. Please choose another."}, 409
+            key = custom_key
+        else:
+            key = generate_key()
+
         paste = {
             "key": key,
             "data": data,
