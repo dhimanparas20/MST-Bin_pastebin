@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const togglePassVis = document.getElementById("togglePassVis")
   const expiryValue = document.getElementById("expiryValue")
   const expiryUnit = document.getElementById("expiryUnit")
+  const maxViewsValue = document.getElementById("maxViewsValue")
 
   // Sidebar elements
   const hamburgerBtn = document.getElementById("hamburgerBtn")
@@ -41,6 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let isLocked = false
   let isExpiryOn = false
   let isViewOnce = false
+  let isMaxViewsOn = false
   let sidebarOpen = false
 
   const MODE_MAP = {
@@ -210,7 +212,7 @@ document.addEventListener("DOMContentLoaded", () => {
       lockIconLockedSide.classList.remove("hidden")
       lockStatusSide.textContent = "on"
       lockStatusSide.classList.add("text-red-400")
-      lockStatusSide.classList.remove("text-gray-500")
+      lockStatusSide.classList.remove("text-purple-500")
       pastePassword.focus()
     } else {
       passwordSection.classList.add("hidden")
@@ -218,7 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
       lockIconLockedSide.classList.add("hidden")
       lockStatusSide.textContent = "off"
       lockStatusSide.classList.remove("text-red-400")
-      lockStatusSide.classList.add("text-gray-500")
+      lockStatusSide.classList.add("text-purple-500")
       pastePassword.value = ""
     }
   })
@@ -243,12 +245,12 @@ document.addEventListener("DOMContentLoaded", () => {
       expirySection.classList.remove("hidden")
       expiryStatusSide.textContent = "on"
       expiryStatusSide.classList.add("text-blue-400")
-      expiryStatusSide.classList.remove("text-gray-500")
+      expiryStatusSide.classList.remove("text-purple-500")
     } else {
       expirySection.classList.add("hidden")
       expiryStatusSide.textContent = "off"
       expiryStatusSide.classList.remove("text-blue-400")
-      expiryStatusSide.classList.add("text-gray-500")
+      expiryStatusSide.classList.add("text-purple-500")
     }
   })
 
@@ -258,11 +260,32 @@ document.addEventListener("DOMContentLoaded", () => {
     if (isViewOnce) {
       viewOnceStatusSide.textContent = "on"
       viewOnceStatusSide.classList.add("text-yellow-400")
-      viewOnceStatusSide.classList.remove("text-gray-500")
+      viewOnceStatusSide.classList.remove("text-purple-500")
     } else {
       viewOnceStatusSide.textContent = "off"
       viewOnceStatusSide.classList.remove("text-yellow-400")
-      viewOnceStatusSide.classList.add("text-gray-500")
+      viewOnceStatusSide.classList.add("text-purple-500")
+    }
+  })
+
+  // ===== MAX VIEWS TOGGLE =====
+  const maxViewsToggleSide = document.getElementById("maxViewsToggleSide")
+  const maxViewsStatusSide = document.getElementById("maxViewsStatusSide")
+  const maxViewsSection = document.getElementById("maxViewsSection")
+
+  maxViewsToggleSide.addEventListener("click", () => {
+    isMaxViewsOn = !isMaxViewsOn
+    if (isMaxViewsOn) {
+      maxViewsSection.classList.remove("hidden")
+      maxViewsStatusSide.textContent = "on"
+      maxViewsStatusSide.classList.add("text-purple-300")
+      maxViewsStatusSide.classList.remove("text-purple-500")
+      maxViewsValue.focus()
+    } else {
+      maxViewsSection.classList.add("hidden")
+      maxViewsStatusSide.textContent = "off"
+      maxViewsStatusSide.classList.remove("text-purple-300")
+      maxViewsStatusSide.classList.add("text-purple-500")
     }
   })
 
@@ -306,6 +329,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (isViewOnce) body.view_once = true
+    if (isMaxViewsOn) {
+      const mv = parseInt(maxViewsValue.value)
+      if (isNaN(mv) || mv < 1) { alert("Please enter a valid view count"); return }
+      body.max_views = mv
+    }
 
     fetch("/api/save", {
       method: "POST",

@@ -149,6 +149,24 @@
                     <span id="viewOnceStatusSide" class="text-xs text-purple-500">off</span>
                 </button>
             </div>
+
+            <!-- Section: Delete after N views -->
+            <div>
+                <button id="maxViewsToggleSide" class="flex items-center justify-between w-full text-left text-sm text-purple-200 hover:text-white py-1 focus:outline-none group">
+                    <span class="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-purple-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        <span>Delete after views</span>
+                    </span>
+                    <span id="maxViewsStatusSide" class="text-xs text-purple-500">off</span>
+                </button>
+                <div id="maxViewsSection" class="hidden mt-2 space-y-2">
+                    <input id="maxViewsValue" type="number" min="1" max="999" value="5" placeholder="number of views"
+                        class="w-full bg-gray-800 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
+                </div>
+            </div>
         </div>
 
         <!-- Save button at bottom of sidebar -->

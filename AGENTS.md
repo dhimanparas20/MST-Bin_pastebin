@@ -38,7 +38,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
     │  CodeMirror editor, hamburger sidebar (desktop open, mobile hidden)
     │  Sidebar: title, custom key, load paste, language, lock toggle, expiry, view-once
     │
-    ▼ POST /api/save  {data, heading, language, custom_key?, password?, expiry_value?, expiry_unit?, view_once?}
+    ▼ POST /api/save  {data, heading, language, custom_key?, password?, expiry_value?, expiry_unit?, view_once?, max_views?}
 [Flask: app.py → SavePaste]
     │  Validates size ≤ MAX_PASTE_SIZE, validates custom_key (4-20 alphanumeric/-/_, no spaces),
     │  checks uniqueness if custom_key provided, else generates random key,
@@ -53,6 +53,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
     ▼
 [Flask: app.py → GetPaste]
     │  Checks: expiry passed? → delete + 404 page.  view_once + already viewed? → delete + 404.
+    │  max_views reached? → delete + 404.
     │  If paste has password_hash: renders modal (no content)
     │  If no password_hash: increments open_count, renders content
     │  Passes expires_text ("Expires in X days") and view_once flag to template
@@ -79,6 +80,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
   - If `password` is provided: validated no spaces, hashed with `werkzeug.security.generate_password_hash()`, stored as `password_hash`
   - If `expiry_value` + `expiry_unit` provided: calculates `expires_at` epoch timestamp (max: 86400s/1440m/720h/365d/52w/12m)
   - If `view_once` is true: sets flag, paste deletes after first view
+  - If `max_views` is provided: sets limit, paste deletes after N views
 - **`generate_key()`** — generates a random alphanumeric key of `KEY_LENGTH` length, retries until a unique key is found
 - **`format_expiry(expires_at)`** — returns human-readable string like "Expires in 3 days"
 - **`GetPaste`** — GET `/<key>`, renders `paste.html`. Returns 404 page if not found. Checks `expires_at` (delete if past) and `view_once` (delete if open_count > 0). If paste has `password_hash`, renders without content with `password_required=True`
@@ -92,7 +94,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - CodeMirror modes pre-loaded: python, javascript, xml, htmlmixed, css, clike, shell, sql, yaml, markdown, php, ruby
 - Modes loaded dynamically: typescript, go, rust, swift, lua, perl, dockerfile, nginx
 - **Hamburger sidebar**: `<aside id="sidePanel">` — glassmorphism panel on right side. Desktop auto-open (pushes editor left), mobile closed by default with overlay
-- **Sidebar controls**: title input, custom key, load paste + Go, language selector, lock toggle + password + eye icon, auto-delete (value + unit: sec/min/hr/day/week/month), view-once toggle
+- **Sidebar controls**: title input, custom key, load paste + Go, language selector, lock toggle + password + eye icon, auto-delete (value + unit: sec/min/hr/day/week/month), view-once toggle, delete-after-N-views toggle
 - **Save button**: in sidebar bottom when open, in top navbar when sidebar closed
 - **Hamburger button**: right side of navbar, toggles sidebar open/close
 - Editor via `<textarea id="pasteArea">` transformed by `CodeMirror.fromTextArea()`
@@ -177,7 +179,7 @@ with app.app_context():
 1. **Templates use Jinja2** — `{{ paste }}` is auto-escaped. Use `{{ paste | tojson }}` for JS injection (line 83 of paste.html), and `{{ paste | safe }}` only if XSS is already mitigated by context (we use `textContent` instead).
 2. **Static base URL** — In dev mode, `static_base_url` resolves to `http://host:port`. In prod, it's an S3 bucket URL. The context processor handles this. Templates should always use `{{ static_base_url }}/css/styles.css` not hardcoded paths.
 3. **CDN scripts are in templates** — Not in the `public/` folder. CodeMirror, highlight.js, and Tailwind are loaded from cdnjs. This avoids bundling large libraries.
-4. **MongoDB document shape**: `{key, data, heading, language, created_at (epoch int), ip_address, open_count, password_hash?, expires_at?, view_once?}`. No `_id` needed for queries (use `key` field). `key` can be either auto-generated (random) or user-provided (custom_key). `password_hash` is only present when a password was set.
+4. **MongoDB document shape**: `{key, data, heading, language, created_at (epoch int), ip_address, open_count, password_hash?, expires_at?, view_once?, max_views?}`. No `_id` needed for queries (use `key` field). `key` can be either auto-generated (random) or user-provided (custom_key). `password_hash` is only present when a password was set.
 5. **Scheduler cleans old pastes** — Pastes with `< 2 views AND > 7 days old` are deleted. Uses epoch comparison.
 6. **No migration needed** — Old pastes without `language` field will default to `"plaintext"` in GetPaste.
 7. **Ctrl+A on paste page** — Intercepted at document level but only triggers when focus is on/near the paste content area, preventing navbar/footer from being selected.

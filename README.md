@@ -21,6 +21,7 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 - 🔒 **Password-protected pastes** — lock pastes with a password, viewer must enter password via glassmorphism modal
 - ⏱ **Auto-delete** — set expiry in seconds to months, lazy deletion on access (no scheduler)
 - 👁 **View-once pastes** — paste auto-deletes after first view, "VIEW ONCE" warning shown
+- 🔢 **Delete after N views** — set a max view count, paste auto-deletes after N views
 - 🔎 **Load paste by ID** — quickly open any paste by entering its key on any page
 - 🏷️ **Language selector** — 25+ languages (Python, JS, Go, Rust, SQL, YAML, Dockerfile, etc.)
 - 📱 **Responsive hamburger sidebar** — all settings in a right-side panel, auto-open on desktop, drawer on mobile

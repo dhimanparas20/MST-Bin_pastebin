@@ -115,6 +115,7 @@ class SavePaste(Resource):
         expiry_value = request.json.get("expiry_value")
         expiry_unit = request.json.get("expiry_unit")
         view_once = request.json.get("view_once", False)
+        max_views = request.json.get("max_views")
         user_ip = request.headers.get("X-Forwarded-For", request.remote_addr)
 
         if not data:
@@ -154,6 +155,17 @@ class SavePaste(Resource):
 
         if view_once:
             paste["view_once"] = True
+
+        if max_views:
+            try:
+                mv = int(max_views)
+                if mv < 1:
+                    return {"error": "Max views must be at least 1"}, 400
+                if mv > 1000:
+                    return {"error": "Max views cannot exceed 1000"}, 400
+                paste["max_views"] = mv
+            except (ValueError, TypeError):
+                return {"error": "Invalid max views value"}, 400
 
         if expiry_value and expiry_unit:
             try:
@@ -235,6 +247,23 @@ class GetPaste(Resource):
                 )
             )
 
+        if "max_views" in paste and paste.get("open_count", 0) >= paste["max_views"]:
+            pastes_collection.delete_one({"key": key})
+            return make_response(
+                render_template(
+                    "paste.html",
+                    paste="",
+                    paste_key=key,
+                    paste_not_found=True,
+                    heading="",
+                    language="",
+                    open_count=0,
+                    password_required=False,
+                    expires_text=None,
+                    view_once=False,
+                )
+            )
+
         heading = paste.get("heading", "My Paste")
         language = paste.get("language", "plaintext")
         expires_text = format_expiry(paste.get("expires_at"))
@@ -284,6 +313,10 @@ class AccessPaste(Resource):
             return {"error": "Paste not found"}, 404
 
         if paste.get("view_once") and paste.get("open_count", 0) > 0:
+            pastes_collection.delete_one({"key": key})
+            return {"error": "Paste not found"}, 404
+
+        if "max_views" in paste and paste.get("open_count", 0) >= paste["max_views"]:
             pastes_collection.delete_one({"key": key})
             return {"error": "Paste not found"}, 404
 
