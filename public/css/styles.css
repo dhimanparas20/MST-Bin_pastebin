@@ -1,5 +1,6 @@
 body {
   font-family: "Courier New", monospace;
+  color: #c8b8e8;
   background: #08000f;
   background-image:
     radial-gradient(ellipse at 20% 50%, rgba(80, 0, 130, 0.12) 0%, transparent 60%),
@@ -67,7 +68,7 @@ body {
 }
 
 .CodeMirror-linenumber {
-  color: #555 !important;
+  color: #665588 !important;
 }
 
 .CodeMirror-cursor {
