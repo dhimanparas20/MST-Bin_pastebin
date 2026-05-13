@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MST Bin</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/monokai.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/monokai.min.css">
     <link rel="stylesheet" href="{{ static_base_url }}/css/styles.css">
     <link rel="icon" type="image/png" href="{{ static_base_url }}/img/favicon.ico">
 </head>
@@ -29,6 +32,38 @@
                     placeholder="title: optional"
                     class="bg-gray-800 text-white rounded px-2 py-1.5 text-xs sm:text-sm flex-grow sm:flex-grow-0 sm:w-40 focus:outline-none focus:ring-2 focus:ring-blue-400"
                 >
+                <select
+                    id="languageSelect"
+                    class="bg-gray-800 text-white rounded px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                >
+                    <option value="auto">Auto Detect</option>
+                    <option value="plaintext">Plain Text</option>
+                    <option value="python">Python</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="typescript">TypeScript</option>
+                    <option value="html">HTML</option>
+                    <option value="css">CSS</option>
+                    <option value="json">JSON</option>
+                    <option value="bash">Bash</option>
+                    <option value="c">C</option>
+                    <option value="cpp">C++</option>
+                    <option value="csharp">C#</option>
+                    <option value="java">Java</option>
+                    <option value="go">Go</option>
+                    <option value="rust">Rust</option>
+                    <option value="sql">SQL</option>
+                    <option value="yaml">YAML</option>
+                    <option value="xml">XML</option>
+                    <option value="markdown">Markdown</option>
+                    <option value="php">PHP</option>
+                    <option value="ruby">Ruby</option>
+                    <option value="kotlin">Kotlin</option>
+                    <option value="swift">Swift</option>
+                    <option value="lua">Lua</option>
+                    <option value="perl">Perl</option>
+                    <option value="dockerfile">Dockerfile</option>
+                    <option value="nginx">Nginx</option>
+                </select>
                 <button id="saveBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1.5 px-3 rounded text-xs sm:text-sm whitespace-nowrap">
                     Save (Ctrl+S)
                 </button>
@@ -43,7 +78,7 @@
 
     <!-- Fixed main content to properly account for navbar and prevent overflow -->
     <main id="mainContent" class="flex-grow w-full overflow-hidden">
-        <div class="flex h-full w-full">
+        <div class="flex h-full w-full" id="editorContainer">
             <div id="lineNumbers" class="text-gray-500 select-none font-mono"></div>
             <textarea id="pasteArea" class="flex-grow bg-black text-white resize-none outline-none font-mono" wrap="off"></textarea>
         </div>
@@ -51,13 +86,26 @@
 
     <footer class="glassmorphism py-2 sm:py-4 text-xs sm:text-sm w-full flex-shrink-0">
         <div class="text-center w-full px-2 sm:px-6">
-            <p>&copy; 2025 MST Services. All rights reserved.</p>
+            <p>&copy; 2026 MST Services. All rights reserved.</p>
         </div>
     </footer>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/shell/shell.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/php/php.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/ruby/ruby.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="{{ static_base_url }}/js/script.js"></script>
     <script>
-        // Dynamically set main padding based on navbar height
         function updateMainPadding() {
             const navbar = document.getElementById('navbar');
             const mainContent = document.getElementById('mainContent');

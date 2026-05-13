@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MST Bin - Paste</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/monokai.min.css">
     <link rel="stylesheet" href="{{ static_base_url }}/css/styles.css">
     <link rel="icon" type="image/png" href="{{ static_base_url }}/img/favicon.ico">
     <style>
@@ -32,12 +33,13 @@
                     <span class="sm:hidden ml-2">MST</span>
                 </a>
                 <span class="ml-2 text-blue-300 font-semibold text-xs sm:text-lg whitespace-nowrap truncate max-w-xs">{{ heading }}</span>
+                <span id="langBadge" class="ml-1 px-1.5 py-0.5 text-[10px] sm:text-xs font-mono bg-gray-700 text-gray-300 rounded whitespace-nowrap">{{ language }}</span>
             </div>
             <div class="flex items-center justify-end gap-3 flex-shrink-0">
                 <button id="copyContentBtn" title="Copy Content" class="text-white hover:text-blue-300 focus:outline-none flex justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
-                        <rect x="3" y="3" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+                        <rect x="9" y="3" width="6" height="4" rx="1" />
                     </svg>
                 </button>
                 <span class="flex items-center text-gray-300 text-xs sm:text-sm gap-1">
@@ -60,28 +62,26 @@
     <main id="mainContent" class="flex-grow w-full h-full px-0 sm:px-6 overflow-auto">
         <div class="flex flex-row w-full h-full overflow-auto">
             <div id="lineNumbers" class="text-gray-500 select-none text-xs sm:text-base font-mono overflow-hidden flex-shrink-0 flex flex-col bg-black pt-2"></div>
-            <pre id="pasteContent" class="flex-grow font-mono text-xs sm:text-base whitespace-pre-wrap break-words overflow-auto bg-black pt-2">{{ paste }}</pre>
+            <pre id="pasteContent" class="flex-grow font-mono text-xs sm:text-base whitespace-pre-wrap break-words overflow-auto bg-black pt-2"><code id="codeBlock" class="language-{{ language }} hljs"></code></pre>
         </div>
     </main>
 
     <footer class="glassmorphism py-2 sm:py-4 text-xs sm:text-sm w-full flex-shrink-0">
         <div class="text-center w-full px-2 sm:px-6">
-            <p>&copy; 2025 MST Services. All rights reserved.</p>
+            <p>&copy; 2026 MST Services. All rights reserved.</p>
         </div>
     </footer>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script>
-        function copyPasteContent() {
-            const pasteContent = document.getElementById('pasteContent');
-            const text = pasteContent.innerText;
-            navigator.clipboard.writeText(text).catch(err => {
-                console.error('Failed to copy content: ', err);
-            });
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
             const pasteContent = document.getElementById('pasteContent');
+            const codeBlock = document.getElementById('codeBlock');
             const lineNumbers = document.getElementById('lineNumbers');
+            const copyBtn = document.getElementById('copyContentBtn');
+
+            codeBlock.textContent = {{ paste | tojson }};
+            hljs.highlightElement(codeBlock);
 
             function updateLineNumbers() {
                 const lines = pasteContent.innerText.split('\n').length;
@@ -92,14 +92,35 @@
 
             updateLineNumbers();
 
-            // Sync scrolling
             pasteContent.addEventListener('scroll', () => {
                 lineNumbers.scrollTop = pasteContent.scrollTop;
             });
 
-            document.getElementById('copyContentBtn').addEventListener('click', copyPasteContent);
+            function copyPasteContent() {
+                const text = pasteContent.innerText;
+                navigator.clipboard.writeText(text).catch(err => {
+                    console.error('Failed to copy content: ', err);
+                });
+            }
 
-            // Dynamically set main padding based on navbar height
+            copyBtn.addEventListener('click', copyPasteContent);
+
+            document.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+                    if (pasteContent.contains(document.activeElement) ||
+                        document.activeElement === document.body ||
+                        document.activeElement === pasteContent ||
+                        document.activeElement === copyBtn) {
+                        e.preventDefault();
+                        const selection = window.getSelection();
+                        const range = document.createRange();
+                        range.selectNodeContents(pasteContent);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    }
+                }
+            });
+
             function updateMainPadding() {
                 const navbar = document.getElementById('navbar');
                 const mainContent = document.getElementById('mainContent');
