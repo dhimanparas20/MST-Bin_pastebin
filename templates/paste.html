@@ -24,6 +24,7 @@
                 {% if not paste_not_found %}
                 <span class="ml-1 text-purple-300 font-semibold text-xs sm:text-lg whitespace-nowrap truncate" style="max-width:120px">{{ heading }}</span>
                 <span id="langBadge" class="ml-1 px-1.5 py-0.5 text-xs font-mono bg-gray-700 text-purple-300 rounded whitespace-nowrap">{{ language }}</span>
+                <code class="ml-1 px-1.5 py-0.5 text-xs font-mono bg-gray-800 text-purple-200 rounded whitespace-nowrap select-all">{{ paste_key }}</code>
                 {% if password_required %}
                 <span class="ml-1 text-red-400 text-xs" title="Password protected">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
