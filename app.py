@@ -268,6 +268,7 @@ class GetPaste(Resource):
         language = paste.get("language", "plaintext")
         expires_text = format_expiry(paste.get("expires_at"))
         is_view_once = paste.get("view_once", False)
+        skip_increment = request.args.get("new") == "1"
 
         if "password_hash" in paste:
             return make_response(
@@ -285,7 +286,8 @@ class GetPaste(Resource):
                 )
             )
 
-        pastes_collection.update_one({"key": key}, {"$inc": {"open_count": 1}})
+        if not skip_increment:
+            pastes_collection.update_one({"key": key}, {"$inc": {"open_count": 1}})
         return make_response(
             render_template(
                 "paste.html",

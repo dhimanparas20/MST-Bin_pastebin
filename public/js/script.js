@@ -342,8 +342,13 @@ document.addEventListener("DOMContentLoaded", () => {
     })
       .then((response) => response.json())
       .then((result) => {
-        if (result.url) window.location.href = result.url
-        else alert(result.error || "Error saving paste. Please try again.")
+        if (result.url) {
+          if (isViewOnce || isMaxViewsOn) {
+            window.location.href = result.url + "?new=1"
+          } else {
+            window.location.href = result.url
+          }
+        } else alert(result.error || "Error saving paste. Please try again.")
       })
       .catch(() => alert("Error saving paste. Please try again."))
   }
