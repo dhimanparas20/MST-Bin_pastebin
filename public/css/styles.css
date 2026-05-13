@@ -1,17 +1,39 @@
 body {
   font-family: "Courier New", monospace;
+  background: #08000f;
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(80, 0, 130, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(50, 0, 100, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 90%, rgba(30, 0, 70, 0.10) 0%, transparent 50%);
+  background-attachment: fixed;
+  animation: bgPulse 12s ease-in-out infinite alternate;
+}
+
+@keyframes bgPulse {
+  0% {
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(80, 0, 130, 0.12) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(50, 0, 100, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 90%, rgba(30, 0, 70, 0.10) 0%, transparent 50%);
+  }
+  100% {
+    background-image:
+      radial-gradient(ellipse at 70% 40%, rgba(80, 0, 130, 0.14) 0%, transparent 60%),
+      radial-gradient(ellipse at 30% 80%, rgba(50, 0, 100, 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 10%, rgba(40, 0, 80, 0.10) 0%, transparent 50%);
+  }
 }
 
 .glassmorphism {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(20, 10, 35, 0.4);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* Slide-in sidebar (right side) */
 .glassmorphism-sidebar {
-  background: rgba(10, 10, 20, 0.97);
+  background: rgba(8, 2, 18, 0.97);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-left: 1px solid rgba(255, 255, 255, 0.08);
@@ -19,7 +41,7 @@ body {
 
 /* Password modal */
 .glassmorphism-modal {
-  background: rgba(20, 20, 30, 0.9);
+  background: rgba(12, 4, 24, 0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -33,15 +55,15 @@ body {
 /* CodeMirror overrides */
 .CodeMirror {
   height: 100% !important;
-  background: #000 !important;
+  background: #07000d !important;
   font-family: "Courier New", monospace !important;
   font-size: 14px;
   line-height: 1.5;
 }
 
 .CodeMirror-gutters {
-  background: #0a0a0a !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: #0a0014 !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
 
 .CodeMirror-linenumber {
@@ -61,7 +83,7 @@ body {
 }
 
 .CodeMirror-scrollbar-filler {
-  background: #000 !important;
+  background: #07000d !important;
 }
 
 #editorContainer {
@@ -97,10 +119,10 @@ body {
 }
 
 footer {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(20, 10, 35, 0.4);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* highlight.js overrides for paste view */
@@ -111,6 +133,11 @@ footer {
   word-break: break-word;
   padding: 8px;
   overflow-x: auto;
+  background: #07000d;
+}
+
+#lineNumbers {
+  background: #0a0014;
 }
 
 #pasteContent code.hljs {
@@ -119,7 +146,7 @@ footer {
 }
 
 .hljs {
-  background: #000 !important;
+  background: #07000d !important;
   color: #ddd;
 }
 
@@ -240,7 +267,7 @@ main {
   flex-direction: column;
 }
 
-main > div {
+main:not(.not-found-main) > div {
   display: flex;
   height: 100%;
   overflow: hidden;

@@ -12,7 +12,7 @@
         body, html { height: 100%; }
     </style>
 </head>
-<body class="bg-black text-white flex flex-col min-h-screen h-full">
+<body class="text-white flex flex-col min-h-screen h-full">
     <nav id="navbar" class="glassmorphism fixed top-0 left-0 right-0 z-50 w-full">
         <div class="flex flex-col sm:flex-row justify-between items-stretch w-full px-3 sm:px-6 py-2 sm:py-3 gap-2 sm:gap-3">
             <div class="flex items-center justify-center sm:justify-start flex-shrink-0 gap-2 flex-wrap">
@@ -70,22 +70,17 @@
     </nav>
 
     {% if paste_not_found %}
-    <main id="mainContent" class="flex-grow w-full h-full flex items-center justify-center px-4">
-        <div class="glassmorphism-modal rounded-2xl p-8 sm:p-10 max-w-md w-full text-center animate-fadeIn">
-            <div class="mb-6">
-                <div class="w-20 h-20 sm:w-24 sm:h-24 mx-auto rounded-full bg-gray-800 flex items-center justify-center" style="border:2px solid rgba(255,255,255,0.08);">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 sm:h-12 sm:w-12 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                </div>
-            </div>
-            <h1 class="text-xl sm:text-2xl font-bold text-white mb-2">Paste Not Found</h1>
-            <p class="text-gray-400 text-sm mb-1">Deleted, expired, or never existed.</p>
-            <p class="text-gray-600 text-xs mb-6">ID: <code class="text-yellow-500 bg-gray-800 px-1.5 py-0.5 rounded text-xs">{{ paste_key }}</code></p>
-            <a href="/" class="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
+    <main id="mainContent" class="not-found-main flex-grow w-full h-full flex items-center justify-center px-4">
+        <div class="text-center animate-fadeIn" style="max-width:400px;">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-5" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="9" y1="15" x2="15" y2="15"/>
+            </svg>
+            <h1 class="text-2xl sm:text-3xl font-bold text-white mb-2">Not Found</h1>
+            <p class="text-gray-400 text-sm mb-1" style="color:#888;">This paste has been deleted, expired, or never existed.</p>
+            <p class="text-xs mb-6" style="color:#555;">Key <code class="text-purple-400">{{ paste_key }}</code></p>
+            <a href="/" class="inline-block bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition-colors">
                 Create New Paste
             </a>
         </div>
@@ -123,8 +118,8 @@
     </div>
     <main id="mainContent" class="flex-grow w-full h-full px-0 sm:px-6 overflow-auto" style="filter:blur(8px);pointer-events:none;">
         <div class="flex flex-row w-full h-full overflow-auto">
-            <div id="lineNumbers" class="text-gray-500 select-none text-xs sm:text-base font-mono overflow-hidden flex-shrink-0 flex flex-col bg-black pt-2"></div>
-            <pre id="pasteContent" class="flex-grow font-mono text-xs sm:text-base whitespace-pre-wrap break-words overflow-auto bg-black pt-2"><code id="codeBlock" class="hljs"></code></pre>
+            <div id="lineNumbers" class="text-gray-500 select-none text-xs sm:text-base font-mono overflow-hidden flex-shrink-0 flex flex-col pt-2"></div>
+            <pre id="pasteContent" class="flex-grow font-mono text-xs sm:text-base whitespace-pre-wrap break-words overflow-auto pt-2"><code id="codeBlock" class="hljs"></code></pre>
         </div>
     </main>
 
@@ -138,8 +133,8 @@
     {% endif %}
     <main id="mainContent" class="flex-grow w-full h-full px-0 sm:px-6 overflow-auto">
         <div class="flex flex-row w-full h-full overflow-auto">
-            <div id="lineNumbers" class="text-gray-500 select-none text-xs sm:text-base font-mono overflow-hidden flex-shrink-0 flex flex-col bg-black pt-2"></div>
-            <pre id="pasteContent" class="flex-grow font-mono text-xs sm:text-base whitespace-pre-wrap break-words overflow-auto bg-black pt-2"><code id="codeBlock" class="language-{{ language }} hljs"></code></pre>
+            <div id="lineNumbers" class="text-gray-500 select-none text-xs sm:text-base font-mono overflow-hidden flex-shrink-0 flex flex-col pt-2"></div>
+            <pre id="pasteContent" class="flex-grow font-mono text-xs sm:text-base whitespace-pre-wrap break-words overflow-auto pt-2"><code id="codeBlock" class="language-{{ language }} hljs"></code></pre>
         </div>
     </main>
     {% endif %}
