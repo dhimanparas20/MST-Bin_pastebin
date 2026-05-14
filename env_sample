@@ -3,12 +3,16 @@ MONGO_DB_NAME=pastebin
 MONGO_COLLECTION_NAME=pastes
 KEY_LENGTH=6
 MAX_PASTE_SIZE=10000
-EXPIRATION_HOURS=24
 FLASK_DEBUG=False
 FLASK_PORT=5000
 FLASK_HOST=0.0.0.0
 
 SECRET_KEY= your_secret_key
+# Encryption key for encrypting paste data at rest.
+# If set, all pastes are encrypted using AES-256 before storing in DB.
+# If not set, pastes are stored in plaintext (not recommended for production).
+# For password-protected pastes, the user's password is used as the encryption key instead.
+ENCRYPTION_KEY=change-me-to-a-random-string
 # prod or dev
 FLASK_ENV = prod
 STATIC_BASE_URL = https://<S3_BUCKET_NAME>.s3.ap-south-1.amazonaws.com

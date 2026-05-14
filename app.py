@@ -1,4 +1,6 @@
+import base64
 import gzip
+import hashlib
 import io
 import os
 import random
@@ -8,6 +10,7 @@ import time
 from datetime import datetime, timedelta
 
 from apscheduler.schedulers.background import BackgroundScheduler
+from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 from flask import Flask, request, render_template, make_response
 from flask_restful import Api, Resource
@@ -18,7 +21,8 @@ load_dotenv()
 
 FLASK_ENV = os.getenv("FLASK_ENV", "dev")
 STATIC_BASE_URL = os.getenv("STATIC_BASE_URL", "/")
-MAX_PASTE_SIZE = int(os.getenv("MAX_PASTE_SIZE", "10000"))
+MAX_PASTE_SIZE = int(os.getenv('MAX_PASTE_SIZE', '10000'))
+ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY', '').strip()
 app: Flask = None
 
 if FLASK_ENV == "prod":
@@ -105,6 +109,25 @@ def format_expiry(expires_at):
     return f"Expires in {months} month" if months == 1 else f"Expires in {months} months"
 
 
+def _derive_fernet_key(secret):
+    digest = hashlib.sha256(secret.encode()).digest()
+    return base64.urlsafe_b64encode(digest)
+
+
+def _get_encryption_key():
+    if ENCRYPTION_KEY:
+        return _derive_fernet_key(ENCRYPTION_KEY)
+    return None
+
+
+def _encrypt(plaintext, key):
+    return Fernet(key).encrypt(plaintext.encode()).decode()
+
+
+def _decrypt(ciphertext, key):
+    return Fernet(key).decrypt(ciphertext.encode()).decode()
+
+
 class SavePaste(Resource):
     def post(self):
         data = request.json.get("data", "")
@@ -131,27 +154,37 @@ class SavePaste(Resource):
                 return {"error": "Password must be 128 characters or fewer"}, 400
 
         if custom_key:
-            if " " in custom_key:
-                return {"error": "Custom key must not contain spaces"}, 400
+            if ' ' in custom_key:
+                return {'error': 'Custom key must not contain spaces'}, 400
             if not re.match(r'^[a-zA-Z0-9_-]{4,20}$', custom_key):
-                return {"error": "Custom key must be 4-20 characters (a-z, A-Z, 0-9, -, _)"}, 400
-            if pastes_collection.find_one({"key": custom_key}):
-                return {"error": "This custom key is already taken. Please choose another."}, 409
+                return {'error': 'Custom key must be 4-20 characters (a-z, A-Z, 0-9, -, _)'}, 400
+            if pastes_collection.find_one({'key': custom_key}):
+                return {'error': 'This custom key is already taken. Please choose another.'}, 409
             key = custom_key
         else:
             key = generate_key()
 
+        encrypted_data = data
+        if password:
+            pw_key = _derive_fernet_key(password)
+            encrypted_data = _encrypt(data, pw_key)
+        elif ENCRYPTION_KEY:
+            encrypted_data = _encrypt(data, _get_encryption_key())
+
         paste = {
-            "key": key,
-            "data": data,
-            "heading": heading,
-            "language": language,
-            "created_at": int(time.time()),
-            "ip_address": user_ip,
-            "open_count": 0,
+            'key': key,
+            'data': encrypted_data,
+            'heading': heading,
+            'language': language,
+            'created_at': int(time.time()),
+            'ip_address': user_ip,
+            'open_count': 0,
         }
         if password:
-            paste["password_hash"] = generate_password_hash(password)
+            paste['password_hash'] = generate_password_hash(password)
+            paste['encrypted_with'] = 'password'
+        elif ENCRYPTION_KEY:
+            paste['encrypted_with'] = 'server'
 
         if view_once:
             paste["view_once"] = True
@@ -287,16 +320,24 @@ class GetPaste(Resource):
             )
 
         if not skip_increment:
-            pastes_collection.update_one({"key": key}, {"$inc": {"open_count": 1}})
+            pastes_collection.update_one({'key': key}, {'$inc': {'open_count': 1}})
+
+        paste_data = paste['data']
+        encrypted_with = paste.get('encrypted_with')
+        if encrypted_with == 'server':
+            paste_data = _decrypt(paste_data, _get_encryption_key())
+        elif encrypted_with is None:
+            pass
+
         return make_response(
             render_template(
-                "paste.html",
-                paste=paste["data"],
-                open_count=paste.get("open_count", 0),
+                'paste.html',
+                paste=paste_data,
+                open_count=paste.get('open_count', 0),
                 heading=heading,
                 language=language,
                 password_required=False,
-                paste_key=paste["key"],
+                paste_key=paste['key'],
                 expires_text=expires_text,
                 view_once=is_view_once,
                 paste_not_found=False,
@@ -325,9 +366,12 @@ class AccessPaste(Resource):
         if "password_hash" not in paste:
             if not paste.get("view_once"):
                 pastes_collection.update_one({"key": key}, {"$inc": {"open_count": 1}})
+            paste_data = paste["data"]
+            if paste.get('encrypted_with') == 'server':
+                paste_data = _decrypt(paste_data, _get_encryption_key())
             return {
                 "ok": True,
-                "paste": paste["data"],
+                "paste": paste_data,
                 "heading": paste.get("heading", "My Paste"),
                 "language": paste.get("language", "plaintext"),
             }
@@ -337,9 +381,13 @@ class AccessPaste(Resource):
             return {"error": "Incorrect password"}, 403
 
         pastes_collection.update_one({"key": key}, {"$inc": {"open_count": 1}})
+        paste_data = paste["data"]
+        if paste.get('encrypted_with') == 'password':
+            pw_key = _derive_fernet_key(password)
+            paste_data = _decrypt(paste_data, pw_key)
         return {
             "ok": True,
-            "paste": paste["data"],
+            "paste": paste_data,
             "heading": paste.get("heading", "My Paste"),
             "language": paste.get("language", "plaintext"),
         }

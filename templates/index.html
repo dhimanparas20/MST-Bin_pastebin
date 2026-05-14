@@ -198,6 +198,13 @@
             </svg>
         </a>
 
+        <!-- About button -->
+        <button id="aboutBtn" title="About MST Bin" class="text-purple-400 hover:text-white focus:outline-none flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        </button>
+
         <!-- Hamburger (right side) -->
         <button id="hamburgerBtn" class="p-1 text-white hover:text-purple-300 focus:outline-none flex-shrink-0" title="Menu">
             <svg id="hamburgerIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -208,6 +215,40 @@
             </svg>
         </button>
     </nav>
+
+    <!-- About Modal -->
+    <div id="aboutModal" class="fixed inset-0 z-50 flex items-center justify-center" style="display:none; background:rgba(0,0,0,0.7); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);">
+        <div class="glassmorphism-modal rounded-xl p-6 sm:p-8 w-11/12 max-w-md mx-auto text-center">
+            <div class="mb-4">
+                <img src="{{ static_base_url }}/img/logo.jpeg" alt="MST Bin Logo" class="h-10 w-10 sm:h-12 sm:w-12 mx-auto rounded">
+            </div>
+            <h2 class="text-white text-lg sm:text-xl font-bold mb-3">MST Bin</h2>
+            <p class="text-purple-300 text-sm mb-4">A modern, secure pastebin for sharing code &amp; text snippets.</p>
+            <ul class="text-left text-xs sm:text-sm text-purple-200 space-y-2 mb-4">
+                <li class="flex items-start gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                    <span><strong>AES-256 Encryption</strong> &mdash; All paste data is encrypted at rest. Password-protected pastes use your password as the encryption key for end-to-end security.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    <span><strong>Live syntax highlighting</strong> &mdash; Auto-detects 25+ languages with CodeMirror editor and highlight.js viewer.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span><strong>Auto-delete</strong> &mdash; Set expiry from seconds to months. Lazy deletion on access.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-purple-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    <span><strong>View-once &amp; max views</strong> &mdash; Paste deletes after first view or after N views.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-pink-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" /></svg>
+                    <span><strong>Custom keys</strong> &mdash; Choose your own memorable paste ID (4-20 characters).</span>
+                </li>
+            </ul>
+            <button id="aboutClose" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg text-sm transition-colors">Close</button>
+        </div>
+    </div>
 
     <!-- Main Editor -->
     <main id="mainContent" class="flex-grow w-full overflow-hidden">
@@ -247,6 +288,16 @@
         window.addEventListener('load', updateMainPadding);
         window.addEventListener('resize', updateMainPadding);
         document.addEventListener('DOMContentLoaded', updateMainPadding);
+
+        document.getElementById('aboutBtn').addEventListener('click', function() {
+            document.getElementById('aboutModal').style.display = 'flex';
+        });
+        document.getElementById('aboutClose').addEventListener('click', function() {
+            document.getElementById('aboutModal').style.display = 'none';
+        });
+        document.getElementById('aboutModal').addEventListener('click', function(e) {
+            if (e.target === this) this.style.display = 'none';
+        });
     </script>
 </body>
 </html>
