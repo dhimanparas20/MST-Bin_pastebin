@@ -101,7 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const editor = CodeMirror.fromTextArea(pasteArea, {
     lineNumbers: true, theme: "monokai", mode: null,
-    lineWrapping: false, viewportMargin: Infinity,
+    lineWrapping: false, viewportMargin: 100,
     tabSize: 4, indentUnit: 4, indentWithTabs: false, autofocus: true
   })
 
@@ -293,7 +293,9 @@ document.addEventListener("DOMContentLoaded", () => {
   function hasSpaces(val) { return val.includes(" ") }
 
   // ===== SAVE =====
+  let isSaving = false
   function savePaste() {
+    if (isSaving) return
     const data = editor.getValue()
     const headingInput = document.getElementById("pasteHeading")
     let heading = headingInput.value.trim()
@@ -335,6 +337,14 @@ document.addEventListener("DOMContentLoaded", () => {
       body.max_views = mv
     }
 
+    isSaving = true
+    const originalSideText = saveBtnSide.innerHTML
+    const originalTopText = saveBtnTop.innerHTML
+    saveBtnSide.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Saving...'
+    saveBtnSide.disabled = true
+    saveBtnTop.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Saving...'
+    saveBtnTop.disabled = true
+
     fetch("/api/save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -348,9 +358,23 @@ document.addEventListener("DOMContentLoaded", () => {
           } else {
             window.location.href = result.url
           }
-        } else alert(result.error || "Error saving paste. Please try again.")
+        } else {
+          isSaving = false
+          saveBtnSide.innerHTML = originalSideText
+          saveBtnSide.disabled = false
+          saveBtnTop.innerHTML = originalTopText
+          saveBtnTop.disabled = false
+          alert(result.error || "Error saving paste. Please try again.")
+        }
       })
-      .catch(() => alert("Error saving paste. Please try again."))
+      .catch(() => {
+        isSaving = false
+        saveBtnSide.innerHTML = originalSideText
+        saveBtnSide.disabled = false
+        saveBtnTop.innerHTML = originalTopText
+        saveBtnTop.disabled = false
+        alert("Error saving paste. Please try again.")
+      })
   }
 
   saveBtnSide.addEventListener("click", savePaste)
