@@ -28,7 +28,10 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 FLASK_ENV = os.getenv("FLASK_ENV", "dev")
-STATIC_BASE_URL = os.getenv("STATIC_BASE_URL", "/")
+# When true, templates use STATIC_BASE_URL (S3/CloudFront) and Flask does not serve public/.
+# When false, Flask serves public/ and templates use relative paths (/css/...).
+USE_CDN_STATIC = os.getenv("USE_CDN_STATIC", "false").lower() == "true"
+STATIC_BASE_URL = os.getenv("STATIC_BASE_URL", "").rstrip("/")
 MAX_PASTE_SIZE = int(os.getenv('MAX_PASTE_SIZE', '10000'))
 ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY', '').strip()
 ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')
@@ -43,11 +46,22 @@ IP_REGEX = re.compile(r'^\d{1,3}(\.\d{1,3}){3}$|^[a-fA-F0-9:]+$')
 
 app: Flask = None
 
-if FLASK_ENV == "prod":
-    logger.info("Running in PRODUCTION environment")
+if USE_CDN_STATIC:
+    if not STATIC_BASE_URL:
+        logger.warning(
+            "USE_CDN_STATIC=true but STATIC_BASE_URL is empty — "
+            "static asset URLs will be broken"
+        )
+    logger.info(
+        "CDN static mode | env=%s static_base_url=%s",
+        FLASK_ENV, STATIC_BASE_URL or "(empty)",
+    )
     app = Flask(__name__, static_folder=None)
 else:
-    logger.info("Running in DEVELOPMENT environment")
+    logger.info(
+        "Local static mode | env=%s (Flask serves public/)",
+        FLASK_ENV,
+    )
     app = Flask(__name__, static_folder="public", static_url_path="/")
 
 _secret = os.getenv("SECRET_KEY", "")
@@ -71,11 +85,10 @@ scheduler = BackgroundScheduler()
 
 @app.context_processor
 def inject_static_base_url():
-    if FLASK_ENV == "prod":
+    if USE_CDN_STATIC:
         return {"static_base_url": STATIC_BASE_URL}
-    else:
-        base_url = f"{request.scheme}://{request.host}"
-        return {"static_base_url": base_url}
+    # Empty prefix → templates resolve to /css/..., /js/..., /img/...
+    return {"static_base_url": ""}
 
 
 @app.after_request
@@ -444,7 +457,11 @@ class Index(Resource):
 def health():
     try:
         client.admin.command('ping')
-        return jsonify({"status": "healthy"}), 200
+        return jsonify({
+            "status": "healthy",
+            "environment": FLASK_ENV,
+            "use_cdn_static": USE_CDN_STATIC,
+        }), 200
     except Exception:
         return jsonify({"status": "unhealthy"}), 503
 

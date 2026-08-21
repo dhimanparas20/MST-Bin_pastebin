@@ -90,7 +90,8 @@ FLASK_HOST=0.0.0.0
 SECRET_KEY=your_strong_random_secret_key
 ENCRYPTION_KEY=change-me-to-a-random-string
 FLASK_ENV=dev
-STATIC_BASE_URL=/
+USE_CDN_STATIC=false
+STATIC_BASE_URL=https://<S3_BUCKET_NAME>.s3.ap-south-1.amazonaws.com
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=change-me-to-a-strong-password
 ```
@@ -107,8 +108,9 @@ ADMIN_PASSWORD=change-me-to-a-strong-password
 | `FLASK_HOST` | `0.0.0.0` | Server bind address |
 | `SECRET_KEY` | — | Flask session secret (**required in prod**) |
 | `ENCRYPTION_KEY` | — | AES-256 server-side encryption key |
-| `FLASK_ENV` | `dev` | `dev` or `prod` |
-| `STATIC_BASE_URL` | `/` | S3 bucket URL in production |
+| `FLASK_ENV` | `dev` | `dev` or `prod` (SECRET_KEY, secure cookies, HSTS) |
+| `USE_CDN_STATIC` | `false` | `true` = load CSS/JS/img from `STATIC_BASE_URL` |
+| `STATIC_BASE_URL` | _(empty)_ | S3/CDN origin (only used when `USE_CDN_STATIC=true`) |
 | `ADMIN_USERNAME` | `admin` | Admin panel username |
 | `ADMIN_PASSWORD` | `admin` | Admin panel password (**change in prod**) |
 
@@ -136,6 +138,12 @@ docker compose up -d
 ```
 
 Exposes on port 80 → internal 5000 via Gunicorn (4 workers).
+
+### Vercel
+
+- `vercel.json` routes app traffic to `app.py`; `public/css|js|img` are published via `@vercel/static`
+- Set `USE_CDN_STATIC=false` to serve assets from Vercel CDN (`/css`, `/js`, `/img`)
+- Set `USE_CDN_STATIC=true` + `STATIC_BASE_URL` to load assets from S3 instead
 
 ## API
 
