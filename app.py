@@ -660,6 +660,42 @@ def api_admin_delete_paste(key):
     return jsonify({'ok': True, 'message': f'Paste {key} deleted'})
 
 
+@app.route('/api/admin/pastes', methods=['DELETE'])
+@admin_required
+def api_admin_batch_delete_pastes():
+    json_data = request.get_json(silent=True) or {}
+    keys = json_data.get('keys', [])
+    if not isinstance(keys, list) or not keys:
+        return jsonify({'error': 'Provide a non-empty list of keys'}), 400
+    if len(keys) > 100:
+        return jsonify({'error': 'Cannot delete more than 100 pastes at once'}), 400
+
+    cleaned = []
+    seen = set()
+    for raw in keys:
+        if not isinstance(raw, str):
+            return jsonify({'error': 'All keys must be strings'}), 400
+        key = raw.strip()
+        if not key or key in seen:
+            continue
+        if not re.match(r'^[a-zA-Z0-9_-]{1,40}$', key):
+            return jsonify({'error': f'Invalid key: {key[:50]}'}), 400
+        seen.add(key)
+        cleaned.append(key)
+
+    if not cleaned:
+        return jsonify({'error': 'No valid keys provided'}), 400
+
+    result = pastes_collection.delete_many({'key': {'$in': cleaned}})
+    logger.info(f"Admin batch-deleted {result.deleted_count} pastes ({len(cleaned)} requested)")
+    return jsonify({
+        'ok': True,
+        'deleted': result.deleted_count,
+        'requested': len(cleaned),
+        'message': f'Deleted {result.deleted_count} of {len(cleaned)} selected pastes',
+    })
+
+
 @app.route('/api/admin/delete-expired', methods=['DELETE'])
 @admin_required
 def api_admin_delete_expired():

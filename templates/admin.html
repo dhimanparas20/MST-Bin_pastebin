@@ -266,9 +266,18 @@
 
         <!-- Pastes Table -->
         <div class="card admin-card">
-            <div class="card-header admin-card-header d-flex justify-content-between align-items-center">
+            <div class="card-header admin-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h6 class="mb-0"><i class="fas fa-list me-2"></i>All Pastes <span class="badge bg-purple ms-2" id="totalCount">0</span></h6>
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <div id="batchActions" class="d-none align-items-center gap-2">
+                        <span class="text-purple-light small" id="selectedCountLabel">0 selected</span>
+                        <button type="button" class="btn btn-sm btn-danger" id="batchDeleteBtn" onclick="showBatchDeleteModal()" title="Delete selected pastes">
+                            <i class="fas fa-trash me-1"></i>Delete selected
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSelection()" title="Clear selection">
+                            Clear
+                        </button>
+                    </div>
                     <select class="form-select form-select-sm admin-input" id="perPageSelect" style="width: auto;">
                         <option value="10">10</option>
                         <option value="20" selected>20</option>
@@ -282,6 +291,9 @@
                     <table class="table table-dark table-hover mb-0 admin-table">
                         <thead>
                             <tr>
+                                <th class="text-purple-light" style="width:2.5rem;">
+                                    <input type="checkbox" class="form-check-input admin-checkbox" id="selectAllPastes" title="Select all on this page" aria-label="Select all on this page">
+                                </th>
                                 <th class="text-purple-light">#</th>
                                 <th class="text-purple-light">Key</th>
                                 <th class="text-purple-light">Title</th>
@@ -296,7 +308,7 @@
                         </thead>
                         <tbody id="pastesTableBody">
                             <tr>
-                                <td colspan="10" class="text-center py-4 text-purple-light">
+                                <td colspan="11" class="text-center py-4 text-purple-light">
                                     <i class="fas fa-spinner fa-spin me-2"></i>Loading pastes...
                                 </td>
                             </tr>
@@ -403,9 +415,13 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body text-center">
-                    <p class="text-white mb-3">Are you sure you want to delete this paste?</p>
-                    <p class="text-purple-light mb-0">Key: <strong class="text-white" id="deleteKey">-</strong></p>
-                    <p class="text-purple-light small">This action cannot be undone.</p>
+                    <p class="text-white mb-3" id="deleteModalMessage">Are you sure you want to delete this paste?</p>
+                    <p class="text-purple-light mb-0" id="deleteKeyWrap">Key: <strong class="text-white" id="deleteKey">-</strong></p>
+                    <p class="text-purple-light small mb-0 mt-2 d-none" id="deleteBatchListWrap">
+                        <span class="d-block mb-1">Keys:</span>
+                        <code class="text-white small" id="deleteBatchList" style="word-break:break-all;"></code>
+                    </p>
+                    <p class="text-purple-light small mt-2">This action cannot be undone.</p>
                 </div>
                 <div class="modal-footer admin-modal-footer justify-content-center">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

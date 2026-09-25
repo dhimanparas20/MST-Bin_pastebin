@@ -42,6 +42,7 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 - **Server-side pagination** — 10/20/50/100 per page
 - **Paste detail modal** — view full paste content, metadata (including description), decryption for server-encrypted pastes
 - **Delete individual pastes** — with confirmation modal
+- **Multi-select batch delete** — checkboxes + select-all (current page); selection persists across pages; delete up to 100 at once
 - **Delete expired pastes** — one-click cleanup of expired, viewed-once, and max-views-exceeded pastes
 - **Session-based auth** — credentials from `.env`, 8-hour session timeout, secure cookie flags
 
@@ -171,5 +172,6 @@ Exposes on port 80 → internal 5000 via Gunicorn (4 workers).
 | `GET` | `/api/admin/pastes` | List pastes (paginated, searchable, filterable) |
 | `GET` | `/api/admin/paste/<key>` | Paste detail (decrypts server-encrypted pastes) |
 | `DELETE` | `/api/admin/paste/<key>` | Delete a paste |
+| `DELETE` | `/api/admin/pastes` | Batch delete. Body: `{keys: ["id1", "id2", ...]}` (max 100) |
 | `DELETE` | `/api/admin/delete-expired` | Delete all expired/view-once/max-views pastes |
 | `GET` | `/api/admin/analytics` | Dashboard analytics data |

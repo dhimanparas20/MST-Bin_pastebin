@@ -97,6 +97,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
     │
     │  View paste → /api/admin/paste/<key> (decrypts server-encrypted, shows description + placeholder for password)
     │  Delete paste → DELETE /api/admin/paste/<key>
+    │  Batch delete → DELETE /api/admin/pastes {keys: [...]} (max 100, validated keys)
     │  Clean expired → DELETE /api/admin/delete-expired (expired by time + viewed-once + max-views exceeded)
     │  Logout → POST /admin/logout (session.clear())
 ```
@@ -147,6 +148,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - `GET /api/admin/pastes` — paginated list with search (re.escape), language/encryption filters, sort, server-side skip/limit
 - `GET /api/admin/paste/<key>` — full detail with decryption for server-encrypted pastes
 - `DELETE /api/admin/paste/<key>` — single paste deletion
+- `DELETE /api/admin/pastes` — batch delete `{keys: [...]}` (max 100; each key must match `^[a-zA-Z0-9_-]{1,40}$`)
 - `DELETE /api/admin/delete-expired` — bulk cleanup: expired by time + viewed-once + max-views (uses $expr for field comparison)
 - `GET /api/admin/analytics` — total pastes, views, avg views, per-day/week/month counts, password/view-once/encrypted counts, language distribution, encryption distribution
 - `GET /health` — MongoDB ping, returns `{status: "healthy/unhealthy"}`
@@ -186,10 +188,11 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - **Analytics cards**: 8 stat cards (total pastes, total views, last 24h, protected, last week, last month, avg views, view-once)
 - **Charts**: language distribution (bar), encryption distribution (doughnut)
 - **Filters**: search (key/heading/IP), language dropdown, encryption filter, sort by/order, per-page selector
-- **Pastes table**: 10 columns (#, key, title, language, date, IP, views, encrypted, expires, actions)
+- **Pastes table**: checkbox column (select-all for current page) + 10 data columns (#, key, title, language, date, IP, views, encrypted, expires, actions)
+- **Batch actions**: toolbar appears when any rows selected — count, Delete selected, Clear; selection persists across pages (max 100 for delete)
 - **Action buttons**: view details, open paste (new tab), delete (confirmation modal)
 - **Paste detail modal**: full metadata including description + content display + open link + delete button
-- **Delete confirmation modal**: shows paste key, warning text, confirm/cancel
+- **Delete confirmation modal**: single key or batch key list preview
 - **Clean Expired button**: one-click cleanup with loading state
 - **Toast notifications**: success/error feedback
 - **Pagination**: server-side with page numbers, prev/next, ellipsis
@@ -227,8 +230,9 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - **`renderPastesTable(pastes)`**: builds table HTML with `escapeHtml()` on all user data, encryption/expiry badges, action buttons
 - **`renderPagination(page, totalPages, total)`**: page numbers with ellipsis, prev/next, handles empty results
 - **`viewPaste(key)`**: fetches detail from `/api/admin/paste/<key>`, shows Bootstrap modal with full metadata (including description) + decrypted content
-- **`showDeleteModal(key)`**: shows confirmation modal
-- **`deletePaste(key)`**: DELETE with loading spinner on confirm button
+- **`showDeleteModal(key)`** / **`showBatchDeleteModal()`**: confirmation for single or multi-select delete
+- **`deletePaste(key)`** / **`batchDeletePastes(keys)`**: DELETE single or batch (loading spinner on confirm)
+- **Selection state**: `selectedKeys` Set; select-all toggles current page; indeterminate header checkbox; `clearSelection()`
 - **`deleteExpired()`**: DELETE `/api/admin/delete-expired` with loading spinner on button
 - **Charts**: Chart.js bar (languages) + doughnut (encryption)
 - **`escapeHtml(text)`**: DOM-based HTML entity escaping

@@ -7,6 +7,9 @@ let currentLanguage = '';
 let currentEncryption = '';
 let perPage = 20;
 let deleteKey = null;
+let deleteKeys = null;
+const selectedKeys = new Set();
+let currentPageKeys = [];
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
@@ -18,7 +21,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Event Listeners
 function setupEventListeners() {
-    // Search
     let searchTimeout;
     document.getElementById('searchInput').addEventListener('input', function(e) {
         clearTimeout(searchTimeout);
@@ -29,7 +31,6 @@ function setupEventListeners() {
         }, 300);
     });
 
-    // Filters
     document.getElementById('languageFilter').addEventListener('change', function(e) {
         currentLanguage = e.target.value;
         currentPage = 1;
@@ -42,7 +43,6 @@ function setupEventListeners() {
         loadPastes();
     });
 
-    // Sort
     document.getElementById('sortBy').addEventListener('change', function(e) {
         currentSortBy = e.target.value;
         currentPage = 1;
@@ -55,14 +55,12 @@ function setupEventListeners() {
         loadPastes();
     });
 
-    // Per page
     document.getElementById('perPageSelect').addEventListener('change', function(e) {
         perPage = parseInt(e.target.value);
         currentPage = 1;
         loadPastes();
     });
 
-    // Toggle filters
     document.getElementById('toggleFilters').addEventListener('click', function() {
         const filtersBody = document.getElementById('filtersBody');
         const icon = this.querySelector('i');
@@ -77,17 +75,21 @@ function setupEventListeners() {
         }
     });
 
-    // Delete confirmation
     document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
-        if (deleteKey) {
+        if (deleteKeys && deleteKeys.length) {
+            batchDeletePastes(deleteKeys);
+        } else if (deleteKey) {
             deletePaste(deleteKey);
         }
     });
 
-    // Modal delete button
     document.getElementById('modalDeleteBtn').addEventListener('click', function() {
         const key = document.getElementById('modalKey').textContent;
         showDeleteModal(key);
+    });
+
+    document.getElementById('selectAllPastes').addEventListener('change', function(e) {
+        toggleSelectAll(e.target.checked);
     });
 }
 
@@ -96,7 +98,7 @@ async function loadAnalytics() {
     try {
         const response = await fetch('/api/admin/analytics');
         const data = await response.json();
-        
+
         document.getElementById('statTotalPastes').textContent = formatNumber(data.total_pastes);
         document.getElementById('statTotalViews').textContent = formatNumber(data.total_views);
         document.getElementById('statLastDay').textContent = formatNumber(data.pastes_last_day);
@@ -105,7 +107,7 @@ async function loadAnalytics() {
         document.getElementById('statLastMonth').textContent = formatNumber(data.pastes_last_month);
         document.getElementById('statAvgViews').textContent = data.avg_views;
         document.getElementById('statViewOnce').textContent = formatNumber(data.view_once_pastes);
-        
+
         updateCharts(data);
     } catch (error) {
         console.error('Failed to load analytics:', error);
@@ -115,8 +117,8 @@ async function loadAnalytics() {
 // Load Pastes
 async function loadPastes() {
     const tbody = document.getElementById('pastesTableBody');
-    tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-purple-light"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</td></tr>';
-    
+    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-purple-light"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</td></tr>';
+
     try {
         const params = new URLSearchParams({
             page: currentPage,
@@ -127,10 +129,10 @@ async function loadPastes() {
             language: currentLanguage,
             encrypted: currentEncryption
         });
-        
+
         const response = await fetch(`/api/admin/pastes?${params}`);
         const data = await response.json();
-        
+
         renderPastesTable(data.pastes);
         renderPagination(data.page, data.total_pages, data.total);
         document.getElementById('totalCount').textContent = data.total;
@@ -141,9 +143,10 @@ async function loadPastes() {
             const end = Math.min(data.page * data.per_page, data.total);
             document.getElementById('paginationInfo').textContent = `Showing ${start}-${end} of ${data.total} pastes`;
         }
+        updateBatchUI();
     } catch (error) {
         console.error('Failed to load pastes:', error);
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load pastes</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load pastes</td></tr>';
         showToast('Error', 'Failed to load pastes', 'error');
     }
 }
@@ -151,11 +154,12 @@ async function loadPastes() {
 // Render Pastes Table
 function renderPastesTable(pastes) {
     const tbody = document.getElementById('pastesTableBody');
-    
+    currentPageKeys = (pastes || []).map(p => p.key);
+
     if (!pastes || pastes.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="text-center py-4">
+                <td colspan="11" class="text-center py-4">
                     <div class="empty-state">
                         <i class="fas fa-inbox"></i>
                         <p class="text-purple-light mb-0">No pastes found</p>
@@ -163,13 +167,21 @@ function renderPastesTable(pastes) {
                 </td>
             </tr>
         `;
+        syncSelectAllCheckbox();
         return;
     }
-    
-    tbody.innerHTML = pastes.map(paste => `
-        <tr>
+
+    tbody.innerHTML = pastes.map(paste => {
+        const key = escapeHtml(paste.key);
+        const checked = selectedKeys.has(paste.key) ? 'checked' : '';
+        return `
+        <tr class="${checked ? 'row-selected' : ''}">
+            <td>
+                <input type="checkbox" class="form-check-input admin-checkbox paste-select" data-key="${key}" ${checked}
+                    onchange="togglePasteSelection(this)" aria-label="Select paste ${key}">
+            </td>
             <td class="text-muted">${paste.index}</td>
-            <td><span class="table-key">${escapeHtml(paste.key)}</span></td>
+            <td><span class="table-key">${key}</span></td>
             <td><span class="table-title" title="${escapeHtml(paste.heading)}">${escapeHtml(paste.heading)}</span></td>
             <td><span class="badge bg-secondary">${escapeHtml(paste.language)}</span></td>
             <td><span class="table-date">${formatDate(paste.created_at)}</span></td>
@@ -179,92 +191,174 @@ function renderPastesTable(pastes) {
             <td>${getExpiryBadge(paste.expires_at)}</td>
             <td>
                 <div class="d-flex gap-1">
-                    <button class="btn btn-action btn-view" onclick="viewPaste('${escapeHtml(paste.key)}')" title="View Details">
+                    <button class="btn btn-action btn-view" onclick="viewPaste('${key}')" title="View Details">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <a href="/${escapeHtml(paste.key)}" target="_blank" class="btn btn-action btn-view" title="Open Paste">
+                    <a href="/${key}" target="_blank" class="btn btn-action btn-view" title="Open Paste">
                         <i class="fas fa-external-link-alt"></i>
                     </a>
-                    <button class="btn btn-action btn-delete" onclick="showDeleteModal('${escapeHtml(paste.key)}')" title="Delete">
+                    <button class="btn btn-action btn-delete" onclick="showDeleteModal('${key}')" title="Delete">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
             </td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
+    syncSelectAllCheckbox();
+}
+
+function togglePasteSelection(checkbox) {
+    const key = checkbox.getAttribute('data-key');
+    if (!key) return;
+    if (checkbox.checked) selectedKeys.add(key);
+    else selectedKeys.delete(key);
+    checkbox.closest('tr')?.classList.toggle('row-selected', checkbox.checked);
+    syncSelectAllCheckbox();
+    updateBatchUI();
+}
+
+function toggleSelectAll(checked) {
+    currentPageKeys.forEach(key => {
+        if (checked) selectedKeys.add(key);
+        else selectedKeys.delete(key);
+    });
+    document.querySelectorAll('.paste-select').forEach(cb => {
+        cb.checked = checked;
+        cb.closest('tr')?.classList.toggle('row-selected', checked);
+    });
+    updateBatchUI();
+}
+
+function syncSelectAllCheckbox() {
+    const selectAll = document.getElementById('selectAllPastes');
+    if (!selectAll) return;
+    if (!currentPageKeys.length) {
+        selectAll.checked = false;
+        selectAll.indeterminate = false;
+        return;
+    }
+    const selectedOnPage = currentPageKeys.filter(k => selectedKeys.has(k)).length;
+    selectAll.checked = selectedOnPage === currentPageKeys.length;
+    selectAll.indeterminate = selectedOnPage > 0 && selectedOnPage < currentPageKeys.length;
+}
+
+function updateBatchUI() {
+    const bar = document.getElementById('batchActions');
+    const label = document.getElementById('selectedCountLabel');
+    const count = selectedKeys.size;
+    if (label) label.textContent = `${count} selected`;
+    if (bar) {
+        if (count > 0) {
+            bar.classList.remove('d-none');
+            bar.classList.add('d-flex');
+        } else {
+            bar.classList.add('d-none');
+            bar.classList.remove('d-flex');
+        }
+    }
+}
+
+function clearSelection() {
+    selectedKeys.clear();
+    document.querySelectorAll('.paste-select').forEach(cb => {
+        cb.checked = false;
+        cb.closest('tr')?.classList.remove('row-selected');
+    });
+    syncSelectAllCheckbox();
+    updateBatchUI();
+}
+
+function showBatchDeleteModal() {
+    const keys = Array.from(selectedKeys);
+    if (!keys.length) {
+        showToast('Info', 'No pastes selected', 'info');
+        return;
+    }
+    if (keys.length > 100) {
+        showToast('Error', 'Select at most 100 pastes at once', 'error');
+        return;
+    }
+    deleteKey = null;
+    deleteKeys = keys;
+    document.getElementById('deleteModalMessage').textContent =
+        `Are you sure you want to delete ${keys.length} selected paste${keys.length === 1 ? '' : 's'}?`;
+    document.getElementById('deleteKeyWrap').classList.add('d-none');
+    document.getElementById('deleteBatchListWrap').classList.remove('d-none');
+    const preview = keys.length > 15
+        ? keys.slice(0, 15).join(', ') + ` … (+${keys.length - 15} more)`
+        : keys.join(', ');
+    document.getElementById('deleteBatchList').textContent = preview;
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
 }
 
 // Render Pagination
 function renderPagination(currentPageNum, totalPages, total) {
     const pagination = document.getElementById('pagination');
-    
+
     if (totalPages <= 1) {
         pagination.innerHTML = '';
         return;
     }
-    
+
     let html = '';
-    
-    // Previous
+
     html += `<li class="page-item ${currentPageNum === 1 ? 'disabled' : ''}">
         <a class="page-link" href="#" onclick="goToPage(${currentPageNum - 1})">&laquo;</a>
     </li>`;
-    
-    // Page numbers
+
     const maxVisible = 5;
     let startPage = Math.max(1, currentPageNum - Math.floor(maxVisible / 2));
     let endPage = Math.min(totalPages, startPage + maxVisible - 1);
-    
+
     if (endPage - startPage < maxVisible - 1) {
         startPage = Math.max(1, endPage - maxVisible + 1);
     }
-    
+
     if (startPage > 1) {
         html += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(1)">1</a></li>`;
         if (startPage > 2) {
             html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
         }
     }
-    
+
     for (let i = startPage; i <= endPage; i++) {
         html += `<li class="page-item ${i === currentPageNum ? 'active' : ''}">
             <a class="page-link" href="#" onclick="goToPage(${i})">${i}</a>
         </li>`;
     }
-    
+
     if (endPage < totalPages) {
         if (endPage < totalPages - 1) {
             html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
         }
         html += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${totalPages})">${totalPages}</a></li>`;
     }
-    
-    // Next
+
     html += `<li class="page-item ${currentPageNum === totalPages ? 'disabled' : ''}">
         <a class="page-link" href="#" onclick="goToPage(${currentPageNum + 1})">&raquo;</a>
     </li>`;
-    
+
     pagination.innerHTML = html;
 }
 
-// Go to page
 function goToPage(page) {
     currentPage = page;
     loadPastes();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// View Paste Details
 async function viewPaste(key) {
     try {
-        const response = await fetch(`/api/admin/paste/${key}`);
+        const response = await fetch(`/api/admin/paste/${encodeURIComponent(key)}`);
         const paste = await response.json();
-        
+
         if (paste.error) {
             showToast('Error', paste.error, 'error');
             return;
         }
-        
+
         document.getElementById('modalTitle').textContent = paste.heading || 'Paste Details';
         document.getElementById('modalKey').textContent = paste.key;
         document.getElementById('modalDescription').textContent = paste.description || '-';
@@ -279,7 +373,7 @@ async function viewPaste(key) {
         document.getElementById('modalDataSize').textContent = formatBytes(paste.data_length);
         document.getElementById('modalContent').textContent = paste.data || '[No content]';
         document.getElementById('modalOpenLink').href = `/${paste.key}`;
-        
+
         const modal = new bootstrap.Modal(document.getElementById('pasteModal'));
         modal.show();
     } catch (error) {
@@ -288,33 +382,36 @@ async function viewPaste(key) {
     }
 }
 
-// Show Delete Modal
 function showDeleteModal(key) {
     deleteKey = key;
+    deleteKeys = null;
+    document.getElementById('deleteModalMessage').textContent = 'Are you sure you want to delete this paste?';
+    document.getElementById('deleteKeyWrap').classList.remove('d-none');
+    document.getElementById('deleteBatchListWrap').classList.add('d-none');
     document.getElementById('deleteKey').textContent = key;
     const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
     modal.show();
 }
 
-// Delete Paste
 async function deletePaste(key) {
     const btn = document.getElementById('confirmDeleteBtn');
     const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Deleting...';
     btn.disabled = true;
-    
+
     try {
-        const response = await fetch(`/api/admin/paste/${key}`, { method: 'DELETE' });
+        const response = await fetch(`/api/admin/paste/${encodeURIComponent(key)}`, { method: 'DELETE' });
         const data = await response.json();
-        
+
         if (data.ok) {
+            selectedKeys.delete(key);
             showToast('Success', `Paste ${key} deleted`, 'success');
             loadPastes();
             loadAnalytics();
         } else {
             showToast('Error', data.error || 'Failed to delete paste', 'error');
         }
-        
+
         bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
         bootstrap.Modal.getInstance(document.getElementById('pasteModal'))?.hide();
     } catch (error) {
@@ -323,20 +420,58 @@ async function deletePaste(key) {
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
+        deleteKey = null;
+        deleteKeys = null;
     }
 }
 
-// Delete Expired
+async function batchDeletePastes(keys) {
+    const btn = document.getElementById('confirmDeleteBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Deleting...';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch('/api/admin/pastes', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ keys }),
+        });
+        const data = await response.json();
+
+        if (data.ok) {
+            keys.forEach(k => selectedKeys.delete(k));
+            showToast('Success', data.message || `Deleted ${data.deleted} pastes`, 'success');
+            loadPastes();
+            loadAnalytics();
+            updateBatchUI();
+        } else {
+            showToast('Error', data.error || 'Failed to delete selected pastes', 'error');
+        }
+
+        bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+        bootstrap.Modal.getInstance(document.getElementById('pasteModal'))?.hide();
+    } catch (error) {
+        console.error('Failed to batch delete:', error);
+        showToast('Error', 'Failed to delete selected pastes', 'error');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        deleteKey = null;
+        deleteKeys = null;
+    }
+}
+
 async function deleteExpired() {
     const btn = document.getElementById('deleteExpiredBtn');
     const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Cleaning...';
     btn.disabled = true;
-    
+
     try {
         const response = await fetch('/api/admin/delete-expired', { method: 'DELETE' });
         const data = await response.json();
-        
+
         if (data.ok) {
             showToast('Success', data.message || `Deleted ${data.deleted} expired pastes`, 'success');
             loadPastes();
@@ -360,10 +495,10 @@ let encryptionChart = null;
 function setupCharts() {
     const languageCtx = document.getElementById('languageChart').getContext('2d');
     const encryptionCtx = document.getElementById('encryptionChart').getContext('2d');
-    
+
     Chart.defaults.color = '#a78bfa';
     Chart.defaults.borderColor = 'rgba(139, 92, 246, 0.2)';
-    
+
     languageChart = new Chart(languageCtx, {
         type: 'bar',
         data: {
@@ -394,7 +529,7 @@ function setupCharts() {
             }
         }
     });
-    
+
     encryptionChart = new Chart(encryptionCtx, {
         type: 'doughnut',
         data: {
@@ -433,7 +568,7 @@ function updateCharts(data) {
         languageChart.data.datasets[0].data = data.language_stats.map(s => s.count);
         languageChart.update();
     }
-    
+
     if (data.encryption_stats) {
         let server = 0, password = 0, none = 0;
         data.encryption_stats.forEach(stat => {
@@ -490,12 +625,12 @@ function getEncryptionBadge(encryptedWith, hasPasswordHash) {
 
 function getExpiryBadge(expiresAt) {
     if (!expiresAt) return '<span class="badge badge-active">Never</span>';
-    
+
     const now = Math.floor(Date.now() / 1000);
     if (expiresAt < now) {
         return '<span class="badge badge-expired">Expired</span>';
     }
-    
+
     const remaining = expiresAt - now;
     if (remaining < 3600) {
         const mins = Math.floor(remaining / 60);
@@ -509,16 +644,15 @@ function getExpiryBadge(expiresAt) {
     }
 }
 
-// Toast Notifications
 function showToast(title, message, type = 'info') {
     const toast = document.getElementById('adminToast');
     const toastTitle = document.getElementById('toastTitle');
     const toastBody = document.getElementById('toastBody');
     const toastIcon = document.getElementById('toastIcon');
-    
+
     toastTitle.textContent = title;
     toastBody.textContent = message;
-    
+
     toastIcon.className = 'fas me-2';
     if (type === 'success') {
         toastIcon.classList.add('fa-check-circle', 'text-success');
@@ -527,7 +661,7 @@ function showToast(title, message, type = 'info') {
     } else {
         toastIcon.classList.add('fa-info-circle', 'text-info');
     }
-    
+
     const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
     bsToast.show();
 }
