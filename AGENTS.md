@@ -41,7 +41,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 ```
 [Browser: index.html + script.js]
     │  CodeMirror editor, hamburger sidebar (desktop open, mobile hidden)
-    │  Sidebar: title (max 40), description (optional, max 100), custom key (4-40), load paste, language, lock, expiry, view-once, max-views
+    │  Sidebar: title (max 40), custom key (4-40), load paste, language, description textarea (optional, max 100, multi-line), lock, expiry, view-once, max-views
     │
     ▼ POST /api/save  {data, heading, language, description?, custom_key?, password?, expiry_value?, expiry_unit?, view_once?, max_views?}
 [Flask: app.py → SavePaste]
@@ -160,7 +160,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - CodeMirror modes pre-loaded: python, javascript, xml, htmlmixed, css, clike, shell, sql, yaml, markdown, php, ruby
 - Modes loaded dynamically: typescript, go, rust, swift, lua, perl, dockerfile, nginx
 - **Hamburger sidebar**: `<aside id="sidePanel">` — glassmorphism panel on right side. Desktop auto-open (pushes editor left), mobile closed by default with overlay
-- **Sidebar controls**: title (maxlength 40), description (optional, maxlength 100), custom key (4-40), load paste + Go, language selector, lock toggle + password + eye icon, auto-delete (value + unit: sec/min/hr/day/week/month), view-once toggle, delete-after-N-views toggle
+- **Sidebar controls**: title (maxlength 40), custom key (4-40), load paste + Go, language selector, description textarea (optional, maxlength 100, multi-line, below language), lock toggle + password + eye icon, auto-delete (value + unit: sec/min/hr/day/week/month), view-once toggle, delete-after-N-views toggle
 - **Save button**: in sidebar bottom when open, in top navbar when sidebar closed, shows spinner + disabled during save
 - **Hamburger button**: right side of navbar, toggles sidebar open/close
 - **About modal**: feature list + keyboard shortcuts (`kbd-hint` styles); Ctrl+/ opens it, Esc closes

@@ -27,12 +27,6 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs text-purple-400 mb-1 ml-1">Description <span class="text-purple-600">(optional, max 100)</span></label>
-                    <input id="pasteDescription" type="text" maxlength="100" placeholder="Short description..."
-                        class="w-full bg-gray-800 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                </div>
-
-                <div>
                     <label class="block text-xs text-purple-400 mb-1 ml-1">Custom ID <span class="text-purple-600">(optional, 4-40)</span></label>
                     <input id="customKey" type="text" minlength="4" maxlength="40" placeholder="my-cool-paste"
                         class="w-full bg-gray-800 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
@@ -78,6 +72,12 @@
                         <option value="dockerfile">Dockerfile</option>
                         <option value="nginx">Nginx</option>
                     </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-purple-400 mb-1 ml-1">Description <span class="text-purple-600">(optional, max 100)</span></label>
+                    <textarea id="pasteDescription" maxlength="100" rows="3" placeholder="Short description..."
+                        class="w-full bg-gray-800 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y"></textarea>
                 </div>
             </div>
 
