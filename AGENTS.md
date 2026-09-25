@@ -46,7 +46,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
     ▼ POST /api/save  {data, heading, language, description?, custom_key?, password?, expiry_value?, expiry_unit?, view_once?, max_views?}
 [Flask: app.py → SavePaste]
     │  Validates size ≤ MAX_PASTE_SIZE, heading max 40, description max 100 (stored only if non-empty),
-    │  validates custom_key (4-40 alphanumeric/-/_, no spaces),
+    │  validates custom_key (4-40 alphanumeric/-/_; spaces auto-replaced with `-`),
     │  checks uniqueness if custom_key provided, else generates random key (unique index + DuplicateKeyError),
     │  hashes password with werkzeug.security if provided (no spaces allowed),
     │  encrypts with Fernet (AES-256) if ENCRYPTION_KEY set or password provided,
@@ -134,7 +134,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - `_render_paste_page(**kwargs)` — shared defaults for paste.html (heading, description, max_views, created_at, encrypted_with, password_protected, etc.)
 
 **Resources**
-- `SavePaste` — POST `/api/save`: validates JSON body (get_json silent=True), heading max 40 chars, description max 100 (optional, omitted from doc if empty), language whitelist, size check, password validation (no spaces, max 128), custom_key 4-40 format + uniqueness, encrypts if password or ENCRYPTION_KEY, DuplicateKeyError handling
+- `SavePaste` — POST `/api/save`: validates JSON body (get_json silent=True), heading max 40 chars, description max 100 (optional, omitted from doc if empty), language whitelist, size check, password validation (no spaces, max 128), custom_key spaces→`-` then 4-40 format + uniqueness, encrypts if password or ENCRYPTION_KEY, DuplicateKeyError handling
 - `GetPaste` — GET `/<key>`: skips reserved keys (admin/api/health), checks expiry/view_once/max_views (deletes if violated), increments open_count, decrypts server-encrypted, renders paste.html via `_render_paste_page`
 - `AccessPaste` — POST `/api/access/<key>`: checks expiry/view_once/max_views, validates password with check_password_hash, always increments open_count (consistent with GetPaste), decrypts with user password, returns description in JSON
 - `Index` — GET `/`: renders index.html
@@ -160,9 +160,9 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - CodeMirror modes pre-loaded: python, javascript, xml, htmlmixed, css, clike, shell, sql, yaml, markdown, php, ruby
 - Modes loaded dynamically: typescript, go, rust, swift, lua, perl, dockerfile, nginx
 - **Hamburger sidebar**: `<aside id="sidePanel">` — glassmorphism panel on right side. Desktop auto-open (pushes editor left), mobile closed by default with overlay
-- **Sidebar controls**: title (maxlength 40), custom key (4-40), load paste + Go, language selector, description textarea (optional, maxlength 100, multi-line, below language), lock toggle + password + eye icon, auto-delete (value + unit: sec/min/hr/day/week/month), view-once toggle, delete-after-N-views toggle
-- **Save button**: in sidebar bottom when open, in top navbar when sidebar closed, shows spinner + disabled during save
-- **Hamburger button**: right side of navbar, toggles sidebar open/close
+- **Sidebar controls**: title (maxlength 40), custom key (4-40; spaces auto-replaced with `-`), language selector, description textarea (optional, maxlength 100, multi-line, below language), lock toggle + password + eye icon, auto-delete (value + unit: sec/min/hr/day/week/month), view-once toggle, delete-after-N-views toggle
+- **Navbar**: logo, paste ID + Go (load paste), Save (when sidebar closed), new paste, about, hamburger
+- **Save button**: also at sidebar bottom when open; spinner + disabled during save
 - **About modal**: feature list + keyboard shortcuts (`kbd-hint` styles); Ctrl+/ opens it, Esc closes
 - Editor via `<textarea id="pasteArea">` transformed by `CodeMirror.fromTextArea()`
 
@@ -209,14 +209,14 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - **`setEditorMode(language)`**: checks `CodeMirror.modes` for loaded modes (using parent map), loads dynamically if needed
 - **Auto-detect trigger**: on `editor.on("change")` when `currentLanguage === "auto"` (debounced 600ms)
 - **Save**: resolves "auto" language to detected before POSTing, includes optional `custom_key` and `description` if provided, heading/description length capped client-side, shows spinner + disables buttons during save, re-enables on error
-- **Load paste**: reads key from `#loadPasteKey`, navigates to `/<key>`
+- **Load paste**: navbar `#navPasteKey` + Go (same as paste viewer); spaces in ID auto-replaced with `-`; `/` focuses the input
 - **Lock toggle**: shows/hides `#passwordSection`, swaps lock SVG icons, sends password in POST body
 - **Expiry toggle**: shows/hides `#expirySection` (value + unit), sends expiry_value/expiry_unit in POST body
 - **View-once toggle**: toggles `view_once` boolean, sends in POST body
-- **Keyboard shortcuts**: Ctrl+S save, Ctrl+N new empty paste (`/`), Esc closes mobile sidebar
+- **Keyboard shortcuts**: Ctrl+S save, Ctrl+N new empty paste (`/`), Esc closes mobile sidebar, `/` focus paste ID
 - **Ctrl+V anywhere**: focuses editor and pastes clipboard content when no input/textarea/select is active
 - **Eye icon toggle**: switches password input type between `password` and `text`
-- **Space validation**: client-side checks that custom key, paste ID, password contain no spaces; custom key regex `^[a-zA-Z0-9_-]{4,40}$`
+- **Custom key**: live input replaces whitespace with `-`; regex `^[a-zA-Z0-9_-]{4,40}$` after normalization; password still rejects spaces
 - **Sidebar responsive**: auto-opens on desktop (>=640px), closed on mobile, overlay backdrop on mobile
 - **`viewportMargin: 100`** (not Infinity) for performance with large pastes
 
@@ -311,4 +311,4 @@ node --check public/js/admin.js
 11. **Reserved routes** — `GetPaste` skips keys `admin`, `api`, `health` to prevent route shadowing.
 12. **Error handling** — `request.get_json(silent=True) or {}` prevents AttributeError on malformed JSON. `PyMongoError` handler returns 503. Decryption failures return placeholder text (not raw exception).
 13. **Keyboard shortcuts** — Documented in About modal on both editor and viewer: Ctrl+S save, Ctrl+N new paste, Ctrl+/ about, Esc close modals/panels, `/` focus paste ID (viewer), Ctrl+Shift+C copy (viewer), Ctrl+I toggle paste info flyout (viewer). Do not use Ctrl+Shift+I (browser DevTools).
-14. **Custom key / title limits** — Custom key `^[a-zA-Z0-9_-]{4,40}$` (client + server). Title truncated to 40 chars server-side. Description truncated to 100 chars.
+14. **Custom key / title limits** — Custom key: spaces/whitespace auto-replaced with `-`, then must match `^[a-zA-Z0-9_-]{4,40}$` (client + server). Title truncated to 40 chars. Description truncated to 100 chars. Load-paste ID inputs also normalize spaces→`-`.

@@ -295,6 +295,8 @@
             function navigateToPaste() {
                 var key = navPasteKey.value.trim();
                 if (!key) return;
+                key = key.replace(/\s+/g, '-');
+                navPasteKey.value = key;
                 window.location.href = '/' + encodeURIComponent(key);
             }
             navPasteGo.addEventListener('click', navigateToPaste);

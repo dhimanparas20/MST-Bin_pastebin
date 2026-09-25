@@ -3,8 +3,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const lineNumbers = document.getElementById("lineNumbers")
   const languageSelect = document.getElementById("languageSelect")
   const customKeyInput = document.getElementById("customKey")
-  const loadPasteKey = document.getElementById("loadPasteKey")
-  const loadPasteBtn = document.getElementById("loadPasteBtn")
+  const navPasteKey = document.getElementById("navPasteKey")
+  const navPasteGo = document.getElementById("navPasteGo")
   const pastePassword = document.getElementById("pastePassword")
   const togglePassVis = document.getElementById("togglePassVis")
   const expiryValue = document.getElementById("expiryValue")
@@ -301,13 +301,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const descriptionInput = document.getElementById("pasteDescription")
     let heading = headingInput.value.trim().slice(0, 40)
     const description = (descriptionInput ? descriptionInput.value.trim() : "").slice(0, 100)
-    const customKey = customKeyInput.value.trim()
+    let customKey = customKeyInput.value.trim()
 
     if (!data.trim()) { alert("Please enter some text before saving."); return }
     if (!heading) heading = "My Paste"
 
     if (customKey) {
-      if (hasSpaces(customKey)) { alert("Custom key must not contain spaces"); return }
+      customKey = customKey.replace(/\s+/g, "-")
+      customKeyInput.value = customKey
       if (!/^[a-zA-Z0-9_-]{4,40}$/.test(customKey)) { alert("Custom key must be 4-40 characters (a-z, A-Z, 0-9, -, _)"); return }
     }
 
@@ -394,16 +395,45 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   })
 
-  // ===== LOAD PASTE =====
+  // ===== LOAD PASTE (navbar) =====
   function loadPaste() {
-    const key = loadPasteKey.value.trim()
+    let key = navPasteKey.value.trim()
     if (!key) return
-    if (hasSpaces(key)) { alert("Paste ID must not contain spaces"); return }
+    key = key.replace(/\s+/g, "-")
+    navPasteKey.value = key
     window.location.href = "/" + encodeURIComponent(key)
   }
-  loadPasteBtn.addEventListener("click", loadPaste)
-  loadPasteKey.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); loadPaste() }
+  if (navPasteGo) navPasteGo.addEventListener("click", loadPaste)
+  if (navPasteKey) {
+    navPasteKey.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); loadPaste() }
+    })
+  }
+
+  // Live-normalize spaces → hyphens in custom key field
+  if (customKeyInput) {
+    customKeyInput.addEventListener("input", () => {
+      const start = customKeyInput.selectionStart
+      const before = customKeyInput.value
+      const after = before.replace(/\s+/g, "-")
+      if (before !== after) {
+        customKeyInput.value = after
+        const pos = Math.min(start, after.length)
+        customKeyInput.setSelectionRange(pos, pos)
+      }
+    })
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const tag = document.activeElement && document.activeElement.tagName
+      const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT"
+      if (!typing && navPasteKey && document.activeElement !== navPasteKey) {
+        e.preventDefault()
+        navPasteKey.focus()
+        navPasteKey.select()
+      }
+    }
   })
 
   // ===== Ctrl+V anywhere focuses editor =====

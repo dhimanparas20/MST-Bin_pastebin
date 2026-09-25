@@ -18,13 +18,13 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 - Dark violet gradient theme with animated glassmorphism background
 - **Live syntax highlighting** in the editor (CodeMirror 5 + monokai theme)
 - **Auto language detection** — paste code and language is automatically identified
-- **Custom paste keys** — choose your own memorable key (4-40 chars, optional, checked for uniqueness)
+- **Custom paste keys** — choose your own memorable key (4-40 chars, optional; spaces auto-converted to `-`)
 - **Title & description** — title up to 40 chars; optional multi-line description up to 100 chars (textarea below language)
 - **Password-protected pastes** — lock pastes with a password, viewer must enter password via glassmorphism modal
 - **Auto-delete** — set expiry in seconds to months, lazy deletion on access
 - **View-once pastes** — paste auto-deletes after first view, "VIEW ONCE" warning shown
 - **Delete after N views** — set a max view count, paste auto-deletes after N views
-- **Load paste by ID** — quickly open any paste by entering its key on any page
+- **Load paste by ID** — paste ID + Go in the top navbar on editor and viewer pages (`/` focuses the input)
 - **Language selector** — 25+ languages (Python, JS, Go, Rust, SQL, YAML, Dockerfile, etc.)
 - **Responsive hamburger sidebar** — all settings in a right-side panel, auto-open on desktop, drawer on mobile
 - **Paste info flyout** — on paste view, toggleable right panel with title, description, ID, language, views, expiry, lock/view-once badges

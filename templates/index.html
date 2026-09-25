@@ -33,15 +33,6 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs text-purple-400 mb-1 ml-1">Load Paste by ID</label>
-                    <div class="flex gap-2">
-                        <input id="loadPasteKey" type="text" placeholder="paste ID"
-                            class="flex-1 bg-gray-800 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
-                        <button id="loadPasteBtn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-4 py-2 rounded text-sm whitespace-nowrap">Go</button>
-                    </div>
-                </div>
-
-                <div>
                     <label class="block text-xs text-purple-400 mb-1 ml-1">Language</label>
                     <select id="languageSelect" class="w-full bg-gray-800 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
                         <option value="auto">Auto Detect</option>
@@ -193,6 +184,12 @@
         </a>
 
         <div class="flex-1"></div>
+
+        <div class="flex items-center gap-1 flex-shrink-0">
+            <input id="navPasteKey" type="text" placeholder="paste ID"
+                class="bg-gray-800 text-white rounded px-2 py-1.5 text-xs sm:text-sm w-20 sm:w-24 focus:outline-none focus:ring-2 focus:ring-yellow-400">
+            <button id="navPasteGo" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-1.5 px-2 rounded text-xs sm:text-sm whitespace-nowrap">Go</button>
+        </div>
 
         <!-- Save button in navbar (visible when sidebar closed or mobile) -->
         <button id="saveBtnTop" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1.5 px-4 rounded text-xs sm:text-sm whitespace-nowrap hidden">Save</button>

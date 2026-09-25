@@ -282,8 +282,7 @@ class SavePaste(Resource):
                 return {"error": "Password must be 128 characters or fewer"}, 400
 
         if custom_key:
-            if ' ' in custom_key:
-                return {'error': 'Custom key must not contain spaces'}, 400
+            custom_key = re.sub(r'\s+', '-', custom_key)
             if not re.match(r'^[a-zA-Z0-9_-]{4,40}$', custom_key):
                 return {'error': 'Custom key must be 4-40 characters (a-z, A-Z, 0-9, -, _)'}, 400
             if pastes_collection.find_one({'key': custom_key}):
