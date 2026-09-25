@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MST Bin - Paste</title>
+    <title>{% if heading %}{{ heading }} - {% endif %}MST Bin</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/monokai.min.css">
     <link rel="stylesheet" href="{{ static_base_url }}/css/styles.css">
@@ -13,47 +13,108 @@
     </style>
 </head>
 <body class="text-white flex flex-col min-h-screen h-full">
+    {% if not paste_not_found %}
+    <div id="infoOverlay" class="fixed inset-0 z-30 bg-black bg-opacity-60 hidden transition-opacity duration-300" style="backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);"></div>
+    <aside id="infoPanel" class="fixed top-12 sm:top-14 bottom-0 right-0 z-40 w-72 glassmorphism-sidebar transition-transform duration-300 ease-in-out overflow-y-auto overflow-x-hidden flex flex-col" style="transform:translateX(100%);" aria-hidden="true">
+        <div class="p-4 space-y-4 flex-shrink-0">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white">Paste Info</h3>
+                <button id="infoPanelClose" class="text-purple-400 hover:text-white p-1 focus:outline-none" title="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-3 text-sm">
+                <div>
+                    <p class="text-xs text-purple-500 mb-0.5">Title</p>
+                    <p class="text-white break-words" id="infoTitle">{{ heading or 'My Paste' }}</p>
+                </div>
+                {% if description %}
+                <div>
+                    <p class="text-xs text-purple-500 mb-0.5">Description</p>
+                    <p class="text-purple-200 break-words" id="infoDescription">{{ description }}</p>
+                </div>
+                {% endif %}
+                <div>
+                    <p class="text-xs text-purple-500 mb-0.5">Paste ID</p>
+                    <code class="text-purple-200 text-xs font-mono bg-gray-800 px-1.5 py-0.5 rounded select-all">{{ paste_key }}</code>
+                </div>
+                <div>
+                    <p class="text-xs text-purple-500 mb-0.5">Language</p>
+                    <p class="text-purple-200 font-mono text-xs">{{ language }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-purple-500 mb-0.5">Views</p>
+                    <p class="text-purple-200"><span id="infoViewCount">{{ open_count }}</span>{% if max_views %} / {{ max_views }}{% endif %}</p>
+                </div>
+                {% if created_at %}
+                <div>
+                    <p class="text-xs text-purple-500 mb-0.5">Created</p>
+                    <p class="text-purple-200 text-xs" id="infoCreated" data-epoch="{{ created_at }}"></p>
+                </div>
+                {% endif %}
+                {% if expires_text %}
+                <div>
+                    <p class="text-xs text-purple-500 mb-0.5">Expiry</p>
+                    <p class="text-purple-200 text-xs">{{ expires_text }}</p>
+                </div>
+                {% endif %}
+                <div class="flex flex-wrap gap-1.5 pt-1">
+                    {% if password_protected %}
+                    <span class="px-1.5 py-0.5 text-xs font-semibold bg-red-900 text-red-300 rounded">Password locked</span>
+                    {% endif %}
+                    {% if view_once %}
+                    <span class="px-1.5 py-0.5 text-xs font-bold bg-yellow-600 text-black rounded">VIEW ONCE</span>
+                    {% endif %}
+                    {% if max_views %}
+                    <span class="px-1.5 py-0.5 text-xs font-semibold bg-purple-900 text-purple-300 rounded">Max {{ max_views }} views</span>
+                    {% endif %}
+                    {% if encrypted_with == 'server' %}
+                    <span class="px-1.5 py-0.5 text-xs font-semibold bg-green-900 text-green-300 rounded">Encrypted</span>
+                    {% elif encrypted_with == 'password' %}
+                    <span class="px-1.5 py-0.5 text-xs font-semibold bg-orange-900 text-orange-300 rounded">E2E encrypted</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </aside>
+    {% endif %}
+
     <nav id="navbar" class="glassmorphism fixed top-0 left-0 right-0 z-50 w-full">
-        <div class="flex flex-col sm:flex-row justify-between items-stretch w-full px-3 sm:px-6 py-2 sm:py-3 gap-2 sm:gap-3">
-            <div class="flex items-center justify-center sm:justify-start flex-shrink-0 gap-2 flex-wrap">
-                <a href="/" class="text-lg sm:text-2xl font-bold flex items-center">
+        <div class="paste-nav relative flex items-center w-full px-3 sm:px-6 py-2 sm:py-3 gap-2 sm:gap-3 min-h-12 sm:min-h-14">
+            <div class="flex items-center justify-start flex-shrink-0 gap-1.5 sm:gap-2 flex-wrap z-10 max-w-[42%] sm:max-w-[38%]">
+                <a href="/" class="text-lg sm:text-2xl font-bold flex items-center flex-shrink-0">
                     <img src="{{ static_base_url }}/img/logo.jpeg" alt="MST Bin Logo" class="h-6 sm:h-8">
                     <span class="hidden sm:inline ml-2">MST Bin</span>
                     <span class="sm:hidden ml-2">MST</span>
                 </a>
                 {% if not paste_not_found %}
-                <span class="ml-1 text-purple-300 font-semibold text-xs sm:text-lg whitespace-nowrap truncate" style="max-width:120px">{{ heading }}</span>
-                <span id="langBadge" class="ml-1 px-1.5 py-0.5 text-xs font-mono bg-gray-700 text-purple-300 rounded whitespace-nowrap">{{ language }}</span>
-                <code class="ml-1 px-1.5 py-0.5 text-xs font-mono bg-gray-800 text-purple-200 rounded whitespace-nowrap select-all">{{ paste_key }}</code>
-                {% if password_required %}
-                <span class="ml-1 text-red-400 text-xs" title="Password protected">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                </span>
-                {% endif %}
-                {% if view_once %}
-                <span class="ml-1 px-1.5 py-0.5 text-xs font-bold bg-yellow-600 text-black rounded whitespace-nowrap" title="This paste will be deleted after viewing">VIEW ONCE</span>
-                {% endif %}
-                {% if expires_text %}
-                <span class="ml-1 text-purple-400 text-xs whitespace-nowrap">{{ expires_text }}</span>
-                {% endif %}
+                <span id="langBadge" class="px-1.5 py-0.5 text-xs font-mono bg-gray-700 text-purple-300 rounded whitespace-nowrap">{{ language }}</span>
+                <code class="px-1.5 py-0.5 text-xs font-mono bg-gray-800 text-purple-200 rounded whitespace-nowrap select-all truncate" style="max-width:10rem" title="{{ paste_key }}">{{ paste_key }}</code>
                 {% endif %}
             </div>
-            <div class="flex items-center justify-end gap-2 sm:gap-3 flex-shrink-0 flex-wrap">
+
+            {% if not paste_not_found %}
+            <div class="paste-nav-title absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none px-2 hidden sm:block" style="max-width:min(36vw,280px);">
+                <span class="block text-center text-purple-100 font-semibold text-sm sm:text-base truncate" title="{{ heading }}">{{ heading }}</span>
+            </div>
+            {% endif %}
+
+            <div class="flex items-center justify-end gap-2 sm:gap-3 flex-shrink-0 flex-wrap ml-auto z-10">
                 <div class="flex items-center gap-1">
                     <input id="navPasteKey" type="text" placeholder="paste ID"
                         class="bg-gray-800 text-white rounded px-2 py-1.5 text-xs sm:text-sm w-20 sm:w-24 focus:outline-none focus:ring-2 focus:ring-yellow-400">
                     <button id="navPasteGo" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-1.5 px-2 rounded text-xs sm:text-sm whitespace-nowrap">Go</button>
                 </div>
-                {% if not paste_not_found and not password_required %}
-                <button id="copyContentBtn" title="Copy Content" class="text-purple-300 hover:text-white focus:outline-none flex justify-center">
+                {% if not paste_not_found %}
+                <button id="copyContentBtn" title="Copy Content (Ctrl+Shift+C)" class="text-purple-300 hover:text-white focus:outline-none flex justify-center{% if password_required %} hidden{% endif %}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
                         <rect x="9" y="3" width="6" height="4" rx="1" />
                     </svg>
                 </button>
-                <button id="copyShareUrl" title="Copy share URL" class="text-purple-300 hover:text-white focus:outline-none flex justify-center">
+                <button id="copyShareUrl" title="Copy share URL" class="text-purple-300 hover:text-white focus:outline-none flex justify-center{% if password_required %} hidden{% endif %}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                     </svg>
@@ -67,11 +128,18 @@
                     </svg>
                     <span id="viewCount">{{ open_count }}</span>
                 </span>
-                <a href="/" title="New Paste" class="text-white hover:text-purple-300 flex justify-center">
+                <a href="/" title="New Paste (Ctrl+N)" class="text-white hover:text-purple-300 flex justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
                 </a>
+                {% if not paste_not_found %}
+                <button id="infoPanelBtn" title="Paste info (Ctrl+I)" class="text-purple-300 hover:text-white focus:outline-none flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h14" />
+                    </svg>
+                </button>
+                {% endif %}
                 <button id="aboutBtn" title="About MST Bin" class="text-purple-400 hover:text-white focus:outline-none flex-shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -79,11 +147,16 @@
                 </button>
             </div>
         </div>
+        {% if not paste_not_found %}
+        <div class="sm:hidden px-3 pb-2 -mt-1">
+            <span class="block text-center text-purple-100 font-semibold text-sm truncate" title="{{ heading }}">{{ heading }}</span>
+        </div>
+        {% endif %}
     </nav>
 
     <!-- About Modal -->
     <div id="aboutModal" class="fixed inset-0 z-50 flex items-center justify-center" style="display:none; background:rgba(0,0,0,0.7); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);">
-        <div class="glassmorphism-modal rounded-xl p-6 sm:p-8 w-11/12 max-w-md mx-auto text-center">
+        <div class="glassmorphism-modal rounded-xl p-6 sm:p-8 w-11/12 max-w-md mx-auto text-center max-h-[90vh] overflow-y-auto">
             <div class="mb-4">
                 <img src="{{ static_base_url }}/img/logo.jpeg" alt="MST Bin Logo" class="h-10 w-10 sm:h-12 sm:w-12 mx-auto rounded">
             </div>
@@ -108,9 +181,21 @@
                 </li>
                 <li class="flex items-start gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-pink-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" /></svg>
-                    <span><strong>Custom keys</strong> &mdash; Choose your own memorable paste ID (4-20 characters).</span>
+                    <span><strong>Custom keys</strong> &mdash; Choose your own memorable paste ID (4-40 characters).</span>
                 </li>
             </ul>
+            <div class="text-left mb-4">
+                <p class="text-purple-400 text-xs font-semibold uppercase tracking-wide mb-2">Keyboard shortcuts</p>
+                <ul class="text-xs sm:text-sm text-purple-200 space-y-1.5 font-mono">
+                    <li><kbd class="kbd-hint">Ctrl</kbd>+<kbd class="kbd-hint">S</kbd> Save paste</li>
+                    <li><kbd class="kbd-hint">Ctrl</kbd>+<kbd class="kbd-hint">N</kbd> New empty paste</li>
+                    <li><kbd class="kbd-hint">Ctrl</kbd>+<kbd class="kbd-hint">/</kbd> Open this info card</li>
+                    <li><kbd class="kbd-hint">Esc</kbd> Close modal / info panel</li>
+                    <li><kbd class="kbd-hint">/</kbd> Focus paste ID</li>
+                    <li><kbd class="kbd-hint">Ctrl</kbd>+<kbd class="kbd-hint">Shift</kbd>+<kbd class="kbd-hint">C</kbd> Copy paste content</li>
+                    <li><kbd class="kbd-hint">Ctrl</kbd>+<kbd class="kbd-hint">I</kbd> Toggle paste info</li>
+                </ul>
+            </div>
             <button id="aboutClose" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg text-sm transition-colors">Close</button>
         </div>
     </div>
@@ -200,6 +285,12 @@
         document.addEventListener('DOMContentLoaded', function() {
             var navPasteKey = document.getElementById('navPasteKey');
             var navPasteGo = document.getElementById('navPasteGo');
+            var mainContent = document.getElementById('mainContent');
+            var infoPanel = document.getElementById('infoPanel');
+            var infoOverlay = document.getElementById('infoOverlay');
+            var infoPanelBtn = document.getElementById('infoPanelBtn');
+            var infoPanelClose = document.getElementById('infoPanelClose');
+            var infoOpen = false;
 
             function navigateToPaste() {
                 var key = navPasteKey.value.trim();
@@ -210,37 +301,108 @@
             navPasteKey.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') { e.preventDefault(); navigateToPaste(); }
             });
-            document.addEventListener('keydown', function(e) {
-                if (e.key === '/' && document.activeElement !== navPasteKey && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
-                    e.preventDefault(); navPasteKey.focus(); navPasteKey.select();
+
+            function openInfoPanel() {
+                if (!infoPanel) return;
+                infoOpen = true;
+                infoPanel.style.transform = 'translateX(0)';
+                infoPanel.setAttribute('aria-hidden', 'false');
+                if (infoOverlay) infoOverlay.classList.remove('hidden');
+                if (mainContent && window.innerWidth >= 640) mainContent.style.marginRight = '288px';
+            }
+            function closeInfoPanel() {
+                if (!infoPanel) return;
+                infoOpen = false;
+                infoPanel.style.transform = 'translateX(100%)';
+                infoPanel.setAttribute('aria-hidden', 'true');
+                if (infoOverlay) infoOverlay.classList.add('hidden');
+                if (mainContent) mainContent.style.marginRight = '0';
+            }
+            function toggleInfoPanel() {
+                if (infoOpen) closeInfoPanel();
+                else openInfoPanel();
+            }
+            if (infoPanelBtn) infoPanelBtn.addEventListener('click', toggleInfoPanel);
+            if (infoPanelClose) infoPanelClose.addEventListener('click', closeInfoPanel);
+            if (infoOverlay) infoOverlay.addEventListener('click', closeInfoPanel);
+
+            var createdEl = document.getElementById('infoCreated');
+            if (createdEl && createdEl.dataset.epoch) {
+                var d = new Date(parseInt(createdEl.dataset.epoch, 10) * 1000);
+                if (!isNaN(d.getTime())) {
+                    createdEl.textContent = d.toLocaleString();
                 }
-            });
+            }
 
             function updateMainPadding() {
                 var mc = document.getElementById('mainContent');
                 if (mc) mc.style.paddingTop = document.getElementById('navbar').offsetHeight + 'px';
             }
             updateMainPadding();
-            window.addEventListener('resize', updateMainPadding);
+            window.addEventListener('resize', function() {
+                updateMainPadding();
+                if (infoOpen && mainContent) {
+                    if (window.innerWidth >= 640) mainContent.style.marginRight = '288px';
+                    else mainContent.style.marginRight = '0';
+                }
+            });
 
             var aboutBtn = document.getElementById('aboutBtn');
             var aboutModal = document.getElementById('aboutModal');
             var aboutClose = document.getElementById('aboutClose');
-            if (aboutBtn) {
-                aboutBtn.addEventListener('click', function() {
-                    aboutModal.style.display = 'flex';
-                });
-            }
-            if (aboutClose) {
-                aboutClose.addEventListener('click', function() {
-                    aboutModal.style.display = 'none';
-                });
-            }
+            function openAbout() { if (aboutModal) aboutModal.style.display = 'flex'; }
+            function closeAbout() { if (aboutModal) aboutModal.style.display = 'none'; }
+            if (aboutBtn) aboutBtn.addEventListener('click', openAbout);
+            if (aboutClose) aboutClose.addEventListener('click', closeAbout);
             if (aboutModal) {
                 aboutModal.addEventListener('click', function(e) {
-                    if (e.target === aboutModal) aboutModal.style.display = 'none';
+                    if (e.target === aboutModal) closeAbout();
                 });
             }
+
+            document.addEventListener('keydown', function(e) {
+                var tag = document.activeElement && document.activeElement.tagName;
+                var typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
+                if ((e.ctrlKey || e.metaKey) && (e.key === 'n' || e.key === 'N')) {
+                    e.preventDefault();
+                    window.location.href = '/';
+                    return;
+                }
+                if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+                    e.preventDefault();
+                    openAbout();
+                    return;
+                }
+                if (e.key === 'Escape') {
+                    if (aboutModal && aboutModal.style.display === 'flex') { closeAbout(); return; }
+                    if (infoOpen) { closeInfoPanel(); return; }
+                }
+                if (!typing && e.key === '/' && document.activeElement !== navPasteKey) {
+                    e.preventDefault();
+                    navPasteKey.focus();
+                    navPasteKey.select();
+                }
+                if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'I' || e.key === 'i')) {
+                    if (infoPanel) { e.preventDefault(); toggleInfoPanel(); }
+                }
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'C' || e.key === 'c')) {
+                    if (!PASTE_NOT_FOUND && !PASSWORD_REQUIRED) {
+                        var pc = document.getElementById('pasteContent');
+                        if (pc) {
+                            e.preventDefault();
+                            navigator.clipboard.writeText(pc.innerText || '').then(function() {
+                                var toast = document.getElementById('copyToast');
+                                if (toast) {
+                                    toast.textContent = 'Copied!';
+                                    toast.classList.remove('hidden');
+                                    setTimeout(function() { toast.classList.add('hidden'); }, 1800);
+                                }
+                            }).catch(function() {});
+                        }
+                    }
+                }
+            });
 
             if (PASTE_NOT_FOUND) return;
 
@@ -274,7 +436,6 @@
                 var modalEyeOff = document.getElementById('modalEyeOff');
                 var modalEyeOn = document.getElementById('modalEyeOn');
                 var passwordModal = document.getElementById('passwordModal');
-                var mainContent = document.getElementById('mainContent');
 
                 updateLineNumbers();
 
@@ -309,9 +470,33 @@
                         if (result.ok) {
                             var vc = document.getElementById('viewCount');
                             if (vc) vc.textContent = (parseInt(vc.textContent) || 0) + 1;
+                            var ivc = document.getElementById('infoViewCount');
+                            if (ivc) ivc.textContent = vc ? vc.textContent : ivc.textContent;
+                            PASSWORD_REQUIRED = false;
                             if (passwordModal) passwordModal.remove();
                             if (mainContent) { mainContent.style.filter = ''; mainContent.style.pointerEvents = ''; }
                             renderContent(result.paste, result.language);
+                            var copyBtn = document.getElementById('copyContentBtn');
+                            var shareBtn = document.getElementById('copyShareUrl');
+                            if (copyBtn) {
+                                copyBtn.classList.remove('hidden');
+                                copyBtn.addEventListener('click', function() {
+                                    navigator.clipboard.writeText(pasteContent ? pasteContent.innerText : '').catch(function() {});
+                                });
+                            }
+                            if (shareBtn) {
+                                shareBtn.classList.remove('hidden');
+                                shareBtn.addEventListener('click', function() {
+                                    var cleanUrl = window.location.origin + '/' + PASTE_KEY;
+                                    navigator.clipboard.writeText(cleanUrl).then(function() {
+                                        var toast = document.getElementById('copyToast');
+                                        if (toast) {
+                                            toast.classList.remove('hidden');
+                                            setTimeout(function() { toast.classList.add('hidden'); }, 1800);
+                                        }
+                                    }).catch(function() {});
+                                });
+                            }
                         } else {
                             modalError.textContent = result.error || 'Incorrect password.';
                             modalError.classList.remove('hidden');

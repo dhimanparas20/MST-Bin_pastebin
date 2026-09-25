@@ -41,11 +41,12 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 ```
 [Browser: index.html + script.js]
     │  CodeMirror editor, hamburger sidebar (desktop open, mobile hidden)
-    │  Sidebar: title, custom key, load paste, language, lock toggle, expiry, view-once, max-views
+    │  Sidebar: title (max 40), description (optional, max 100), custom key (4-40), load paste, language, lock, expiry, view-once, max-views
     │
-    ▼ POST /api/save  {data, heading, language, custom_key?, password?, expiry_value?, expiry_unit?, view_once?, max_views?}
+    ▼ POST /api/save  {data, heading, language, description?, custom_key?, password?, expiry_value?, expiry_unit?, view_once?, max_views?}
 [Flask: app.py → SavePaste]
-    │  Validates size ≤ MAX_PASTE_SIZE, validates custom_key (4-20 alphanumeric/-/_, no spaces),
+    │  Validates size ≤ MAX_PASTE_SIZE, heading max 40, description max 100 (stored only if non-empty),
+    │  validates custom_key (4-40 alphanumeric/-/_, no spaces),
     │  checks uniqueness if custom_key provided, else generates random key (unique index + DuplicateKeyError),
     │  hashes password with werkzeug.security if provided (no spaces allowed),
     │  encrypts with Fernet (AES-256) if ENCRYPTION_KEY set or password provided,
@@ -57,22 +58,24 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 [Browser: paste.html]
     │  GET /<key>
     ▼
-[Flask: app.py → GetPaste]
+[Flask: app.py → GetPaste via _render_paste_page]
     │  Skips reserved keys: admin, api, health
     │  Checks: expiry passed? → delete + 404 page.  view_once + already viewed? → delete + 404.
     │  max_views reached? → delete + 404.
     │  If paste has password_hash: renders modal (no content)
     │  If no password_hash: increments open_count, decrypts if server-encrypted, renders content
-    │  Passes expires_text ("Expires in X days") and view_once flag to template
+    │  Passes heading, description, expires_text, view_once, max_views, created_at, encrypted_with, password_protected
     ▼
 [Browser: paste.html]
+    │  Navbar: left = logo + MST Bin + language + key; center = title; right = controls + info toggle
     │  If 404: "Paste Not Found" page with animation + "Create New Paste" button
     │  If locked: glassmorphism modal, POST /api/access/<key> {password} to unlock
     │  If unlocked/public: codeBlock.textContent = paste_data (XSS-safe via tojson filter)
     │  hljs.highlightElement(codeBlock)
     │  Custom line numbers synced on scroll
     │  Paste ID nav input in navbar to jump to another paste, '/' shortcut
-    │  Displays expiry timer, view-once indicator, lock indicator in navbar
+    │  Info flyout (#infoPanel): title, description, ID, language, views, created, expiry, badges
+    │  View-once floating banner when applicable; lock/expiry details live in info flyout
 
 [Admin Panel: admin.html + admin.js]
     │  Bootstrap 5 dashboard, Chart.js analytics
@@ -92,7 +95,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
     │  Sort: created_at, open_count, key, heading, language
     │  Pagination: server-side with MongoDB skip/limit
     │
-    │  View paste → /api/admin/paste/<key> (decrypts server-encrypted, shows placeholder for password)
+    │  View paste → /api/admin/paste/<key> (decrypts server-encrypted, shows description + placeholder for password)
     │  Delete paste → DELETE /api/admin/paste/<key>
     │  Clean expired → DELETE /api/admin/delete-expired (expired by time + viewed-once + max-views exceeded)
     │  Logout → POST /admin/logout (session.clear())
@@ -128,11 +131,12 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - `_derive_fernet_key(secret)` — SHA-256 → base64 for Fernet key derivation
 - `_get_fernet(key)` — cached Fernet instances (thread-safe, avoids re-init)
 - `_encrypt(plaintext, key)` / `_decrypt(ciphertext, key)` — Fernet AES-256
+- `_render_paste_page(**kwargs)` — shared defaults for paste.html (heading, description, max_views, created_at, encrypted_with, password_protected, etc.)
 
 **Resources**
-- `SavePaste` — POST `/api/save`: validates JSON body (get_json silent=True), heading max 200 chars, language whitelist, size check, password validation (no spaces, max 128), custom_key format + uniqueness, encrypts if password or ENCRYPTION_KEY, DuplicateKeyError handling
-- `GetPaste` — GET `/<key>`: skips reserved keys (admin/api/health), checks expiry/view_once/max_views (deletes if violated), increments open_count, decrypts server-encrypted, renders paste.html
-- `AccessPaste` — POST `/api/access/<key>`: checks expiry/view_once/max_views, validates password with check_password_hash, always increments open_count (consistent with GetPaste), decrypts with user password
+- `SavePaste` — POST `/api/save`: validates JSON body (get_json silent=True), heading max 40 chars, description max 100 (optional, omitted from doc if empty), language whitelist, size check, password validation (no spaces, max 128), custom_key 4-40 format + uniqueness, encrypts if password or ENCRYPTION_KEY, DuplicateKeyError handling
+- `GetPaste` — GET `/<key>`: skips reserved keys (admin/api/health), checks expiry/view_once/max_views (deletes if violated), increments open_count, decrypts server-encrypted, renders paste.html via `_render_paste_page`
+- `AccessPaste` — POST `/api/access/<key>`: checks expiry/view_once/max_views, validates password with check_password_hash, always increments open_count (consistent with GetPaste), decrypts with user password, returns description in JSON
 - `Index` — GET `/`: renders index.html
 
 **Admin Routes**
@@ -156,23 +160,25 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - CodeMirror modes pre-loaded: python, javascript, xml, htmlmixed, css, clike, shell, sql, yaml, markdown, php, ruby
 - Modes loaded dynamically: typescript, go, rust, swift, lua, perl, dockerfile, nginx
 - **Hamburger sidebar**: `<aside id="sidePanel">` — glassmorphism panel on right side. Desktop auto-open (pushes editor left), mobile closed by default with overlay
-- **Sidebar controls**: title input, custom key, load paste + Go, language selector, lock toggle + password + eye icon, auto-delete (value + unit: sec/min/hr/day/week/month), view-once toggle, delete-after-N-views toggle
+- **Sidebar controls**: title (maxlength 40), description (optional, maxlength 100), custom key (4-40), load paste + Go, language selector, lock toggle + password + eye icon, auto-delete (value + unit: sec/min/hr/day/week/month), view-once toggle, delete-after-N-views toggle
 - **Save button**: in sidebar bottom when open, in top navbar when sidebar closed, shows spinner + disabled during save
 - **Hamburger button**: right side of navbar, toggles sidebar open/close
+- **About modal**: feature list + keyboard shortcuts (`kbd-hint` styles); Ctrl+/ opens it, Esc closes
 - Editor via `<textarea id="pasteArea">` transformed by `CodeMirror.fromTextArea()`
 
 ### `templates/paste.html`
 - highlight.js 11 CDN (monokai theme)
 - Paste content injected via JS: `codeBlock.textContent = {{ paste | tojson }}` — XSS safe, preserves raw characters
-- Language badge in navbar: `<span id="langBadge">{{ language }}</span>`
+- **Navbar layout**: left = logo + MST Bin + language badge + paste key; absolute-centered title (mobile gets a secondary centered row); right = paste ID nav, copy/share, views, new paste, info flyout toggle, about
+- **Info flyout** (`#infoPanel`): toggleable right panel — title, description (if set), paste ID, language, views (/ max), created, expiry, badges (password / view-once / max views / encryption). Toggle via list icon button or Ctrl+I; Esc / overlay closes
 - Custom line numbers (`#lineNumbers`) synced with pasteContent scroll
-- **Password modal**: glassmorphism overlay with blur backdrop, password input with eye toggle, POST to `/api/access/<key>`
+- **Password modal**: glassmorphism overlay with blur backdrop, password input with eye toggle, POST to `/api/access/<key>`; copy/share buttons un-hide after unlock
 - **Paste ID nav**: input + Go button in navbar to navigate to another paste, `/` key shortcut to focus
 - **Paste not found**: clean centered page with file icon, "Not Found" heading, paste key display, purple "Create New Paste" button
-- **Expiry display**: shows "Expires in X days/hours/mins/secs" in navbar when applicable
-- **View-once indicator**: bold `VIEW ONCE` pill badge in navbar + floating warning banner near content
-- **Ctrl+A handled**: prevents browser default, selects only `#pasteContent` contents
+- **View-once indicator**: floating warning banner near content (details also in info flyout)
+- **Keyboard shortcuts**: Ctrl+N new paste, Ctrl+/ about, Esc close, Ctrl+Shift+C copy content, Ctrl+I toggle info, Ctrl+A select paste only
 - Copy button uses `pasteContent.innerText` (raw text, no HTML)
+- About modal includes same feature list + shortcuts as index
 
 ### `templates/admin.html`
 - Bootstrap 5.3 CDN + Font Awesome 6.5 + Chart.js 4.4
@@ -182,7 +188,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - **Filters**: search (key/heading/IP), language dropdown, encryption filter, sort by/order, per-page selector
 - **Pastes table**: 10 columns (#, key, title, language, date, IP, views, encrypted, expires, actions)
 - **Action buttons**: view details, open paste (new tab), delete (confirmation modal)
-- **Paste detail modal**: full metadata + content display + open link + delete button
+- **Paste detail modal**: full metadata including description + content display + open link + delete button
 - **Delete confirmation modal**: shows paste key, warning text, confirm/cancel
 - **Clean Expired button**: one-click cleanup with loading state
 - **Toast notifications**: success/error feedback
@@ -202,14 +208,15 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - **`detectLanguage(code)`**: uses `hljs.highlightAuto()`, relevance ≥ 3 threshold, validates against MODE_MAP
 - **`setEditorMode(language)`**: checks `CodeMirror.modes` for loaded modes (using parent map), loads dynamically if needed
 - **Auto-detect trigger**: on `editor.on("change")` when `currentLanguage === "auto"` (debounced 600ms)
-- **Save**: resolves "auto" language to detected before POSTing, includes optional `custom_key` if provided, shows spinner + disables buttons during save, re-enables on error
+- **Save**: resolves "auto" language to detected before POSTing, includes optional `custom_key` and `description` if provided, heading/description length capped client-side, shows spinner + disables buttons during save, re-enables on error
 - **Load paste**: reads key from `#loadPasteKey`, navigates to `/<key>`
 - **Lock toggle**: shows/hides `#passwordSection`, swaps lock SVG icons, sends password in POST body
 - **Expiry toggle**: shows/hides `#expirySection` (value + unit), sends expiry_value/expiry_unit in POST body
 - **View-once toggle**: toggles `view_once` boolean, sends in POST body
+- **Keyboard shortcuts**: Ctrl+S save, Ctrl+N new empty paste (`/`), Esc closes mobile sidebar
 - **Ctrl+V anywhere**: focuses editor and pastes clipboard content when no input/textarea/select is active
 - **Eye icon toggle**: switches password input type between `password` and `text`
-- **Space validation**: client-side checks that custom key, paste ID, password contain no spaces
+- **Space validation**: client-side checks that custom key, paste ID, password contain no spaces; custom key regex `^[a-zA-Z0-9_-]{4,40}$`
 - **Sidebar responsive**: auto-opens on desktop (>=640px), closed on mobile, overlay backdrop on mobile
 - **`viewportMargin: 100`** (not Infinity) for performance with large pastes
 
@@ -219,7 +226,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - **`loadPastes()`**: fetches `/api/admin/pastes` with all filter/sort/page params, shows loading spinner, handles empty state ("No pastes found"), error state
 - **`renderPastesTable(pastes)`**: builds table HTML with `escapeHtml()` on all user data, encryption/expiry badges, action buttons
 - **`renderPagination(page, totalPages, total)`**: page numbers with ellipsis, prev/next, handles empty results
-- **`viewPaste(key)`**: fetches detail from `/api/admin/paste/<key>`, shows Bootstrap modal with full metadata + decrypted content
+- **`viewPaste(key)`**: fetches detail from `/api/admin/paste/<key>`, shows Bootstrap modal with full metadata (including description) + decrypted content
 - **`showDeleteModal(key)`**: shows confirmation modal
 - **`deletePaste(key)`**: DELETE with loading spinner on confirm button
 - **`deleteExpired()`**: DELETE `/api/admin/delete-expired` with loading spinner on button
@@ -238,6 +245,8 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - Glassmorphism navbar/footer: `rgba(20,10,35,0.4)` with blur(10px)
 - Paste not found `fadeInUp` animation
 - Sidebar scrollbar custom styling
+- `.kbd-hint` styles for keyboard shortcut chips in About modal
+- `#infoPanel` scrollbar (same pattern as `#sidePanel`)
 - All responsive breakpoints at 640px and 768px
 
 ### `public/css/admin.css`
@@ -292,12 +301,14 @@ node --check public/js/admin.js
 1. **Templates use Jinja2** — `{{ paste }}` is auto-escaped. Use `{{ paste | tojson }}` for JS injection (line 83 of paste.html), and `{{ paste | safe }}` only if XSS is already mitigated by context (we use `textContent` instead).
 2. **Static base URL** — Controlled by `USE_CDN_STATIC`, not `FLASK_ENV`. When `USE_CDN_STATIC=true`, `static_base_url` is `STATIC_BASE_URL` (S3/CDN) and Flask does not serve `public/`. When `false`, `static_base_url` is `""` so templates resolve to relative `/css/...` paths; Flask serves `public/` locally/Docker, and on Vercel `public/**` is published via `@vercel/static` (`/css`, `/js`, `/img` routes in `vercel.json`). Templates should always use `{{ static_base_url }}/css/styles.css` not hardcoded paths.
 3. **CDN scripts are in templates** — Not in the `public/` folder. CodeMirror, highlight.js, Tailwind, Bootstrap, Chart.js, Font Awesome are loaded from CDNs. No SRI hashes (caused issues with jsdelivr).
-4. **MongoDB document shape**: `{key, data, heading, language, created_at (epoch int), ip_address, open_count, password_hash?, encrypted_with?, expires_at?, view_once?, max_views?}`. `key` is indexed as unique. `password_hash` only present when password was set. `encrypted_with` is `"server"` (ENCRYPTION_KEY), `"password"` (user password), or absent (plaintext).
+4. **MongoDB document shape**: `{key, data, heading, language, created_at (epoch int), ip_address, open_count, description?, password_hash?, encrypted_with?, expires_at?, view_once?, max_views?}`. `key` is indexed as unique. `heading` max 40 chars. `description` optional, max 100 chars, only stored when non-empty. `password_hash` only present when password was set. `encrypted_with` is `"server"` (ENCRYPTION_KEY), `"password"` (user password), or absent (plaintext).
 5. **Scheduler runs in production** — `scheduler.start()` is called both in `__main__` block and at module level. Under Gunicorn, the module-level call ensures the scheduler starts. Cleans: low-view old pastes + expired by time + viewed-once pastes.
-6. **No migration needed** — Old pastes without `language` field default to `"plaintext"` in GetPaste.
+6. **No migration needed** — Old pastes without `language` default to `"plaintext"` in GetPaste; pastes without `description` simply omit it (flyout hides the field).
 7. **Ctrl+A on paste page** — Intercepted at document level but only triggers when focus is on/near the paste content area.
 8. **Admin panel uses Bootstrap** — Not Tailwind. The admin panel (`admin.html`, `admin_login.html`) uses Bootstrap 5.3 for layout and components, with custom dark purple CSS in `admin.css`. The main app uses Tailwind.
 9. **Admin auth is session-based** — Uses Flask's built-in session (cookie-signed with SECRET_KEY). No JWT. Session timeout is 8 hours. Logout is POST-only (not GET) to prevent CSRF logout.
 10. **Encryption** — Fernet (AES-256-CBC + HMAC-SHA256). Key derived via SHA-256 of the secret. Password-protected pastes use user password as encryption key. Server-encrypted pastes use ENCRYPTION_KEY. Fernet instances are cached for performance.
 11. **Reserved routes** — `GetPaste` skips keys `admin`, `api`, `health` to prevent route shadowing.
 12. **Error handling** — `request.get_json(silent=True) or {}` prevents AttributeError on malformed JSON. `PyMongoError` handler returns 503. Decryption failures return placeholder text (not raw exception).
+13. **Keyboard shortcuts** — Documented in About modal on both editor and viewer: Ctrl+S save, Ctrl+N new paste, Ctrl+/ about, Esc close modals/panels, `/` focus paste ID (viewer), Ctrl+Shift+C copy (viewer), Ctrl+I toggle paste info flyout (viewer). Do not use Ctrl+Shift+I (browser DevTools).
+14. **Custom key / title limits** — Custom key `^[a-zA-Z0-9_-]{4,40}$` (client + server). Title truncated to 40 chars server-side. Description truncated to 100 chars.

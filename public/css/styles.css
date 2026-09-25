@@ -219,6 +219,32 @@ html {
   border-radius: 2px;
 }
 
+/* Keyboard shortcut hints in about modal */
+.kbd-hint {
+  display: inline-block;
+  padding: 1px 5px;
+  margin: 0 1px;
+  font-size: 0.7rem;
+  font-family: "Courier New", monospace;
+  color: #e0d0ff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
+/* Paste info flyout scrollbar */
+#infoPanel::-webkit-scrollbar {
+  width: 4px;
+}
+#infoPanel::-webkit-scrollbar-track {
+  background: transparent;
+}
+#infoPanel::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+}
+
 /* Paste not found animation */
 .animate-fadeIn {
   animation: fadeInUp 0.5s ease-out;

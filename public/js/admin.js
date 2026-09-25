@@ -267,6 +267,7 @@ async function viewPaste(key) {
         
         document.getElementById('modalTitle').textContent = paste.heading || 'Paste Details';
         document.getElementById('modalKey').textContent = paste.key;
+        document.getElementById('modalDescription').textContent = paste.description || '-';
         document.getElementById('modalLanguage').textContent = paste.language;
         document.getElementById('modalViews').textContent = paste.open_count;
         document.getElementById('modalCreated').textContent = formatDate(paste.created_at);

@@ -18,7 +18,8 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 - Dark violet gradient theme with animated glassmorphism background
 - **Live syntax highlighting** in the editor (CodeMirror 5 + monokai theme)
 - **Auto language detection** — paste code and language is automatically identified
-- **Custom paste keys** — choose your own memorable key (4-20 chars, optional, checked for uniqueness)
+- **Custom paste keys** — choose your own memorable key (4-40 chars, optional, checked for uniqueness)
+- **Title & description** — title up to 40 chars; optional description up to 100 chars
 - **Password-protected pastes** — lock pastes with a password, viewer must enter password via glassmorphism modal
 - **Auto-delete** — set expiry in seconds to months, lazy deletion on access
 - **View-once pastes** — paste auto-deletes after first view, "VIEW ONCE" warning shown
@@ -26,6 +27,9 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 - **Load paste by ID** — quickly open any paste by entering its key on any page
 - **Language selector** — 25+ languages (Python, JS, Go, Rust, SQL, YAML, Dockerfile, etc.)
 - **Responsive hamburger sidebar** — all settings in a right-side panel, auto-open on desktop, drawer on mobile
+- **Paste info flyout** — on paste view, toggleable right panel with title, description, ID, language, views, expiry, lock/view-once badges
+- **Centered title** — paste header: logo + language + key on the left, title centered, controls on the right
+- **Keyboard shortcuts** — Ctrl+S save, Ctrl+N new paste, Ctrl+/ about, Esc close, `/` focus paste ID, Ctrl+Shift+C copy, Ctrl+I paste info (listed in About card)
 - One-click copy button on paste view
 - **Size limit** — configurable max paste size (default 10,000 chars)
 
@@ -36,7 +40,7 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 - **Filters** — by language, encryption type (server/password/none)
 - **Sorting** — by date, views, key, title, language (asc/desc)
 - **Server-side pagination** — 10/20/50/100 per page
-- **Paste detail modal** — view full paste content, metadata, decryption for server-encrypted pastes
+- **Paste detail modal** — view full paste content, metadata (including description), decryption for server-encrypted pastes
 - **Delete individual pastes** — with confirmation modal
 - **Delete expired pastes** — one-click cleanup of expired, viewed-once, and max-views-exceeded pastes
 - **Session-based auth** — credentials from `.env`, 8-hour session timeout, secure cookie flags
@@ -47,7 +51,7 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 - **Admin password** — constant-time comparison via `hmac.compare_digest`
 - **Security headers** — X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy, HSTS (prod)
 - **MongoDB indexes** — unique index on `key`, indexes on `created_at`, `open_count`
-- **Input validation** — heading length limit (200 chars), language whitelist, regex-escaped search, pagination bounds
+- **Input validation** — heading max 40 chars, description max 100 chars, custom key 4-40, language whitelist, regex-escaped search, pagination bounds
 - **Rate limiting protection** — admin login failure logging, key generation max retries
 - **Health check** — `GET /health` endpoint for monitoring
 - **AES-256 encryption** — server-side encryption at rest, password-protected pastes use user password as key
@@ -152,7 +156,7 @@ Exposes on port 80 → internal 5000 via Gunicorn (4 workers).
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/` | Editor homepage |
-| `POST` | `/api/save` | Save a paste. Body: `{data, heading, language, custom_key?, password?, expiry_value?, expiry_unit?, view_once?, max_views?}` |
+| `POST` | `/api/save` | Save a paste. Body: `{data, heading, language, description?, custom_key?, password?, expiry_value?, expiry_unit?, view_once?, max_views?}` |
 | `GET` | `/<key>` | View a paste. If locked shows password modal. If expired/viewed-once shows 404 |
 | `POST` | `/api/access/<key>` | Unlock a protected paste `{password}`. Returns paste data or 403 |
 | `GET` | `/health` | Health check (returns MongoDB ping status) |

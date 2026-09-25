@@ -298,7 +298,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (isSaving) return
     const data = editor.getValue()
     const headingInput = document.getElementById("pasteHeading")
-    let heading = headingInput.value.trim()
+    const descriptionInput = document.getElementById("pasteDescription")
+    let heading = headingInput.value.trim().slice(0, 40)
+    const description = (descriptionInput ? descriptionInput.value.trim() : "").slice(0, 100)
     const customKey = customKeyInput.value.trim()
 
     if (!data.trim()) { alert("Please enter some text before saving."); return }
@@ -306,7 +308,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (customKey) {
       if (hasSpaces(customKey)) { alert("Custom key must not contain spaces"); return }
-      if (!/^[a-zA-Z0-9_-]{4,20}$/.test(customKey)) { alert("Custom key must be 4-20 characters (a-z, A-Z, 0-9, -, _)"); return }
+      if (!/^[a-zA-Z0-9_-]{4,40}$/.test(customKey)) { alert("Custom key must be 4-40 characters (a-z, A-Z, 0-9, -, _)"); return }
     }
 
     let lang = currentLanguage
@@ -314,6 +316,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const body = { data, heading, language: lang }
     if (customKey) body.custom_key = customKey
+    if (description) body.description = description
 
     if (isLocked) {
       const pw = pastePassword.value.trim()
@@ -381,7 +384,14 @@ document.addEventListener("DOMContentLoaded", () => {
   saveBtnTop.addEventListener("click", savePaste)
 
   document.addEventListener("keydown", (e) => {
-    if (e.ctrlKey && e.key === "s") { e.preventDefault(); savePaste() }
+    if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); savePaste() }
+    if ((e.ctrlKey || e.metaKey) && (e.key === "n" || e.key === "N")) {
+      e.preventDefault()
+      window.location.href = "/"
+    }
+    if (e.key === "Escape" && sidebarOpen && window.innerWidth < 640) {
+      closeSidebar()
+    }
   })
 
   // ===== LOAD PASTE =====

@@ -21,14 +21,20 @@
             <!-- Section: Basics -->
             <div class="space-y-3">
                 <div>
-                    <label class="block text-xs text-purple-400 mb-1 ml-1">Title</label>
-                    <input id="pasteHeading" type="text" maxlength="20" placeholder="My Paste"
+                    <label class="block text-xs text-purple-400 mb-1 ml-1">Title <span class="text-purple-600">(max 40)</span></label>
+                    <input id="pasteHeading" type="text" maxlength="40" placeholder="My Paste"
                         class="w-full bg-gray-800 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
                 </div>
 
                 <div>
-                    <label class="block text-xs text-purple-400 mb-1 ml-1">Custom ID <span class="text-purple-600">(optional, 4-20)</span></label>
-                    <input id="customKey" type="text" minlength="4" maxlength="20" placeholder="my-cool-paste"
+                    <label class="block text-xs text-purple-400 mb-1 ml-1">Description <span class="text-purple-600">(optional, max 100)</span></label>
+                    <input id="pasteDescription" type="text" maxlength="100" placeholder="Short description..."
+                        class="w-full bg-gray-800 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-purple-400 mb-1 ml-1">Custom ID <span class="text-purple-600">(optional, 4-40)</span></label>
+                    <input id="customKey" type="text" minlength="4" maxlength="40" placeholder="my-cool-paste"
                         class="w-full bg-gray-800 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
                 </div>
 
@@ -218,7 +224,7 @@
 
     <!-- About Modal -->
     <div id="aboutModal" class="fixed inset-0 z-50 flex items-center justify-center" style="display:none; background:rgba(0,0,0,0.7); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);">
-        <div class="glassmorphism-modal rounded-xl p-6 sm:p-8 w-11/12 max-w-md mx-auto text-center">
+        <div class="glassmorphism-modal rounded-xl p-6 sm:p-8 w-11/12 max-w-md mx-auto text-center max-h-[90vh] overflow-y-auto">
             <div class="mb-4">
                 <img src="{{ static_base_url }}/img/logo.jpeg" alt="MST Bin Logo" class="h-10 w-10 sm:h-12 sm:w-12 mx-auto rounded">
             </div>
@@ -243,9 +249,21 @@
                 </li>
                 <li class="flex items-start gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-pink-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" /></svg>
-                    <span><strong>Custom keys</strong> &mdash; Choose your own memorable paste ID (4-20 characters).</span>
+                    <span><strong>Custom keys</strong> &mdash; Choose your own memorable paste ID (4-40 characters).</span>
                 </li>
             </ul>
+            <div class="text-left mb-4">
+                <p class="text-purple-400 text-xs font-semibold uppercase tracking-wide mb-2">Keyboard shortcuts</p>
+                <ul class="text-xs sm:text-sm text-purple-200 space-y-1.5 font-mono">
+                    <li><kbd class="kbd-hint">Ctrl</kbd>+<kbd class="kbd-hint">S</kbd> Save paste</li>
+                    <li><kbd class="kbd-hint">Ctrl</kbd>+<kbd class="kbd-hint">N</kbd> New empty paste</li>
+                    <li><kbd class="kbd-hint">Ctrl</kbd>+<kbd class="kbd-hint">/</kbd> Open this info card</li>
+                    <li><kbd class="kbd-hint">Esc</kbd> Close modal / sidebar</li>
+                    <li><kbd class="kbd-hint">/</kbd> Focus paste ID (viewer)</li>
+                    <li><kbd class="kbd-hint">Ctrl</kbd>+<kbd class="kbd-hint">Shift</kbd>+<kbd class="kbd-hint">C</kbd> Copy paste content (viewer)</li>
+                    <li><kbd class="kbd-hint">Ctrl</kbd>+<kbd class="kbd-hint">I</kbd> Toggle paste info (viewer)</li>
+                </ul>
+            </div>
             <button id="aboutClose" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg text-sm transition-colors">Close</button>
         </div>
     </div>
@@ -297,6 +315,15 @@
         });
         document.getElementById('aboutModal').addEventListener('click', function(e) {
             if (e.target === this) this.style.display = 'none';
+        });
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+                e.preventDefault();
+                document.getElementById('aboutModal').style.display = 'flex';
+            }
+            if (e.key === 'Escape') {
+                document.getElementById('aboutModal').style.display = 'none';
+            }
         });
     </script>
 </body>

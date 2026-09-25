@@ -231,11 +231,33 @@ def _decrypt(ciphertext, key):
     return _get_fernet(key).decrypt(ciphertext.encode()).decode()
 
 
+def _render_paste_page(**kwargs):
+    defaults = {
+        'paste': '',
+        'paste_key': '',
+        'paste_not_found': False,
+        'heading': '',
+        'description': '',
+        'language': '',
+        'open_count': 0,
+        'password_required': False,
+        'expires_text': None,
+        'view_once': False,
+        'max_views': None,
+        'password_protected': False,
+        'created_at': None,
+        'encrypted_with': None,
+    }
+    defaults.update(kwargs)
+    return make_response(render_template('paste.html', **defaults))
+
+
 class SavePaste(Resource):
     def post(self):
         json_data = request.get_json(silent=True) or {}
         data = json_data.get("data", "")
-        heading = (json_data.get("heading", "My Paste") or "My Paste").strip()[:200] or "My Paste"
+        heading = (json_data.get("heading", "My Paste") or "My Paste").strip()[:40] or "My Paste"
+        description = (json_data.get("description", "") or "").strip()[:100]
         language = (json_data.get("language", "plaintext") or "plaintext").strip()
         if language not in ALLOWED_LANGUAGES:
             language = "plaintext"
@@ -262,8 +284,8 @@ class SavePaste(Resource):
         if custom_key:
             if ' ' in custom_key:
                 return {'error': 'Custom key must not contain spaces'}, 400
-            if not re.match(r'^[a-zA-Z0-9_-]{4,20}$', custom_key):
-                return {'error': 'Custom key must be 4-20 characters (a-z, A-Z, 0-9, -, _)'}, 400
+            if not re.match(r'^[a-zA-Z0-9_-]{4,40}$', custom_key):
+                return {'error': 'Custom key must be 4-40 characters (a-z, A-Z, 0-9, -, _)'}, 400
             if pastes_collection.find_one({'key': custom_key}):
                 return {'error': 'This custom key is already taken. Please choose another.'}, 409
             key = custom_key
@@ -286,6 +308,8 @@ class SavePaste(Resource):
             'ip_address': user_ip,
             'open_count': 0,
         }
+        if description:
+            paste['description'] = description
         if password:
             paste['password_hash'] = generate_password_hash(password)
             paste['encrypted_with'] = 'password'
@@ -338,59 +362,65 @@ class SavePaste(Resource):
 class GetPaste(Resource):
     def get(self, key):
         if key in ('admin', 'api', 'health'):
-            return make_response(render_template("paste.html", paste="", paste_key=key, paste_not_found=True, heading="", language="", open_count=0, password_required=False, expires_text=None, view_once=False))
+            return _render_paste_page(paste_key=key, paste_not_found=True)
 
         paste = pastes_collection.find_one({"key": key})
 
         if not paste:
-            return make_response(
-                render_template("paste.html", paste="", paste_key=key, paste_not_found=True, heading="", language="", open_count=0, password_required=False, expires_text=None, view_once=False)
-            )
+            return _render_paste_page(paste_key=key, paste_not_found=True)
 
         now = int(time.time())
         if "expires_at" in paste and paste["expires_at"] and paste["expires_at"] < now:
             pastes_collection.delete_one({"key": key})
-            return make_response(
-                render_template("paste.html", paste="", paste_key=key, paste_not_found=True, heading="", language="", open_count=0, password_required=False, expires_text=None, view_once=False)
-            )
+            return _render_paste_page(paste_key=key, paste_not_found=True)
 
         if paste.get("view_once") and paste.get("open_count", 0) > 0:
             pastes_collection.delete_one({"key": key})
-            return make_response(
-                render_template("paste.html", paste="", paste_key=key, paste_not_found=True, heading="", language="", open_count=0, password_required=False, expires_text=None, view_once=False)
-            )
+            return _render_paste_page(paste_key=key, paste_not_found=True)
 
         if "max_views" in paste and paste.get("open_count", 0) >= paste["max_views"]:
             pastes_collection.delete_one({"key": key})
-            return make_response(
-                render_template("paste.html", paste="", paste_key=key, paste_not_found=True, heading="", language="", open_count=0, password_required=False, expires_text=None, view_once=False)
-            )
+            return _render_paste_page(paste_key=key, paste_not_found=True)
 
         heading = paste.get("heading", "My Paste")
+        description = paste.get("description", "")
         language = paste.get("language", "plaintext")
         expires_text = format_expiry(paste.get("expires_at"))
         is_view_once = paste.get("view_once", False)
+        max_views = paste.get("max_views")
+        created_at = paste.get("created_at")
+        encrypted_with = paste.get("encrypted_with")
+        password_protected = "password_hash" in paste
         skip_increment = request.args.get("new") == "1"
+        meta = dict(
+            heading=heading,
+            description=description,
+            language=language,
+            paste_key=paste["key"],
+            expires_text=expires_text,
+            view_once=is_view_once,
+            max_views=max_views,
+            created_at=created_at,
+            encrypted_with=encrypted_with,
+            password_protected=password_protected,
+            open_count=paste.get("open_count", 0),
+            paste_not_found=False,
+        )
 
-        if "password_hash" in paste:
-            return make_response(
-                render_template("paste.html", paste="", open_count=paste.get("open_count", 0), heading=heading, language=language, password_required=True, paste_key=paste["key"], expires_text=expires_text, view_once=is_view_once, paste_not_found=False)
-            )
+        if password_protected:
+            return _render_paste_page(paste="", password_required=True, **meta)
 
         if not skip_increment:
             pastes_collection.update_one({'key': key}, {'$inc': {'open_count': 1}})
 
         paste_data = paste['data']
-        encrypted_with = paste.get('encrypted_with')
         if encrypted_with == 'server':
             try:
                 paste_data = _decrypt(paste_data, _get_encryption_key())
             except Exception:
                 paste_data = '[Decryption failed]'
 
-        return make_response(
-            render_template('paste.html', paste=paste_data, open_count=paste.get('open_count', 0), heading=heading, language=language, password_required=False, paste_key=paste['key'], expires_text=expires_text, view_once=is_view_once, paste_not_found=False)
-        )
+        return _render_paste_page(paste=paste_data, password_required=False, **meta)
 
 
 class AccessPaste(Resource):
@@ -424,6 +454,7 @@ class AccessPaste(Resource):
                 "ok": True,
                 "paste": paste_data,
                 "heading": paste.get("heading", "My Paste"),
+                "description": paste.get("description", ""),
                 "language": paste.get("language", "plaintext"),
             }
 
@@ -444,6 +475,7 @@ class AccessPaste(Resource):
             "ok": True,
             "paste": paste_data,
             "heading": paste.get("heading", "My Paste"),
+            "description": paste.get("description", ""),
             "language": paste.get("language", "plaintext"),
         }
 
@@ -604,6 +636,7 @@ def api_admin_paste_detail(key):
     return jsonify({
         'key': paste.get('key', ''),
         'heading': paste.get('heading', 'My Paste'),
+        'description': paste.get('description', ''),
         'language': paste.get('language', 'plaintext'),
         'created_at': paste.get('created_at', 0),
         'ip_address': paste.get('ip_address', ''),
