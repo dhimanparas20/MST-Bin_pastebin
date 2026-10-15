@@ -16,8 +16,8 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 
 ### Editor & Paste
 - Dark violet gradient theme with animated glassmorphism background
-- **Live syntax highlighting** in the editor (CodeMirror 5 + monokai theme)
-- **Auto language detection** — paste code and language is automatically identified
+- **Live syntax highlighting** — colors update while typing or pasting, before saving (CodeMirror 5 + monokai theme)
+- **Continuous auto language detection** — Auto Detect stays selected as content changes; the detected language appears separately below the selector
 - **Editor assistance** — live language-aware indentation, matching/auto-closing brackets, HTML/XML tag closing, and autocomplete (Ctrl+Space; suggestions vary by language)
 - **Word wrap** — enabled by default; toggle it in the editor sidebar
 - **Custom paste keys** — choose your own memorable key (4-40 chars, optional; spaces auto-converted to `-`)
@@ -34,6 +34,15 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 - **Keyboard shortcuts** — Ctrl+S save, Ctrl+N new paste, Ctrl+/ about, Esc close, `/` focus paste ID, Ctrl+Shift+C copy, Ctrl+I paste info (listed in About card)
 - One-click copy button on paste view
 - **Size limit** — configurable max paste size (default 10,000 chars)
+
+### Using the Editor
+
+- **Syntax colors:** leave the language selector on **Auto Detect**, or choose a language explicitly. Highlighting happens directly in the editor before saving. Detection runs after a 600 ms pause, examines the first 5,000 characters, and uses plain text when no confident supported match is found.
+- **Word wrap:** the checkbox below the language selector starts checked on each new editor page. Uncheck it for horizontal scrolling. Wrapping is display-only: it does not insert newlines or change the saved content, and the setting is not persisted between pages.
+- **Suggestions:** supported code modes show suggestions while typing. Press **Ctrl+Space** to request them manually, use the arrow keys to navigate, **Enter/Tab** to accept, and **Esc** to dismiss. Automatic suggestions skip comments and plain-text mode.
+- **Completion coverage:** JavaScript, CSS, SQL, and HTML have dedicated hint addons; XML hints depend on available schema information. Other modes can offer registered keyword hints or words already in the paste. These are browser-side completions, not AI suggestions or project-aware language-server analysis.
+- **Indentation and pairing:** Enter uses the current mode's smart indentation with a four-space indent setting. Code modes match and auto-close brackets; HTML/XML also close tags. Support varies by language mode.
+- **Language downloads:** less-common modes load on demand. A failed download shows feedback below the selector; switch away and select that language again to retry. Late downloads cannot overwrite a newer language selection.
 
 ### Admin Dashboard (`/admin`)
 - **Analytics panel** — total pastes, views, avg views, pastes per day/week/month, language distribution chart, encryption distribution chart

@@ -40,7 +40,8 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 
 ```
 [Browser: index.html + script.js]
-    │  CodeMirror editor, hamburger sidebar (desktop open, mobile hidden)
+    │  CodeMirror editor: live syntax colors, continuous auto-detection, hints, smart indentation, word wrap on by default
+    │  Hamburger sidebar (desktop open, mobile hidden)
     │  Sidebar: title (max 40), custom key (4-40), load paste, language, description textarea (optional, max 100, multi-line), lock, expiry, view-once, max-views
     │
     ▼ POST /api/save  {data, heading, language, description?, custom_key?, password?, expiry_value?, expiry_unit?, view_once?, max_views?}
@@ -161,10 +162,12 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - Tailwind 2.2 CDN + CodeMirror 5 CDN + highlight.js 11 CDN
 - CodeMirror modes pre-loaded: python, javascript, xml, htmlmixed, css, clike, shell, sql, yaml, markdown, php, ruby
 - Modes loaded dynamically: typescript, go, rust, swift, lua, perl, dockerfile, nginx
+- **Addon dependencies**: simple-mode (needed by Rust), matchbrackets, closebrackets, closetag, show-hint (JS + CSS), anyword-hint, javascript-hint, css-hint, sql-hint, xml-hint, html-hint. Load CSS mode before htmlmixed; load xml-hint before html-hint; load addons before `script.js` initializes the editor.
 - **Hamburger sidebar**: `<aside id="sidePanel">` — glassmorphism panel on right side. Desktop auto-open (pushes editor left), mobile closed by default with overlay
 - **Sidebar controls**: title (maxlength 40), custom key (4-40; spaces auto-replaced with `-`), language selector, description textarea (optional, maxlength 100, multi-line, below language), lock toggle + password + eye icon, auto-delete (value + unit: sec/min/hr/day/week/month), view-once toggle, delete-after-N-views toggle
 - **Navbar**: logo, paste ID + Go (load paste), Save (when sidebar closed), new paste, about, hamburger
 - **Save button**: also at sidebar bottom when open; spinner + disabled during save
+- **Editor controls/status**: `#languageStatus` announces detected/selected language or loading failures; `#editorHelp` explains completions; labeled native `#wordWrap` checkbox below the language selector is checked by default. Live highlighting is the pre-save preview.
 - **About modal**: feature list + keyboard shortcuts (`kbd-hint` styles); Ctrl+/ opens it, Esc closes
 - Editor via `<textarea id="pasteArea">` transformed by `CodeMirror.fromTextArea()`
 
@@ -207,10 +210,13 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - **`MODE_MAP`**: internal language name → CodeMirror MIME type
 - **`DYNAMIC_MODES`**: languages that load mode scripts lazily
 - **`HLJS_ALIAS_MAP`**: maps highlight.js language names to internal names (e.g., `"c++"→"cpp"`)
-- **`detectLanguage(code)`**: uses `hljs.highlightAuto()`, relevance ≥ 3 threshold, validates against MODE_MAP
+- **`detectLanguage(code)`**: uses `hljs.highlightAuto()` on the first 5,000 characters, relevance ≥ 3 threshold, validates against MODE_MAP; no confident match falls back to plaintext
 - **`setEditorMode(language)`**: resolves MIME types via `CodeMirror.resolveMode()`, loads modes dynamically with shared promises and stale-request protection, updates the language status
+- **Mode-load state**: `activeLanguage` avoids resetting the same mode; `modeLoads` shares downloads by URL; `modeRequestId` prevents late responses from overriding newer selections. Failed loads clear retry state and display feedback. Confirm the mode actually registered after download.
 - **Editor assistance**: CodeMirror hint addons (automatic while typing and Ctrl+Space), smart indentation, matching/auto-closing brackets, HTML/XML tag closing; simple-mode addon supports languages such as Rust
+- **Completion behavior**: automatic hints use single-line `+input` events after two word characters or `.`/`<`, skip comments/plaintext, and avoid reopening an active menu. `completeSingle: false` prevents automatic insertion of a lone suggestion. Ctrl+Space requests hints; arrow keys navigate, Enter/Tab accept, Esc dismiss. Dedicated providers cover JavaScript/CSS/SQL/HTML; other modes use available keyword/document-word hints. XML hints need schema information for tag suggestions. No language server or AI service is involved.
 - **Word wrap**: `#wordWrap` checkbox is checked by default and toggles CodeMirror's `lineWrapping` without changing content
+- **Wrapping scope**: editor-only display setting; no extra newlines, API fields, database fields, or browser persistence. Each new editor page starts with wrapping enabled.
 - **Auto detection stays enabled**: choosing Auto Detect keeps the selector on `auto`; `#languageStatus` shows the detected language separately
 - **Auto-detect trigger**: on `editor.on("change")` when `currentLanguage === "auto"` (debounced 600ms)
 - **Save**: resolves "auto" language to detected before POSTing, includes optional `custom_key` and `description` if provided, heading/description length capped client-side, shows spinner + disables buttons during save, re-enables on error
@@ -245,6 +251,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - **Dark violet gradient body**: `#08000f` base with 3 radial purple glows + `bgPulse` animation (12s alternate)
 - CodeMirror overrides: dark purple `#07000d` background, `#0a0014` gutters, monospace font
 - CodeMirror selection: blue tint when focused, white tint otherwise
+- Completion menu overrides target `.CodeMirror-hints.monokai`, with a dark violet background and purple active row. The editor flex child uses `min-width: 0` so wrapped long lines fit the available width.
 - highlight.js overrides: dark purple `#07000d` background, monokai color palette
 - Modal glassmorphism: `backdrop-filter: blur(16px)`, purple-tinted semi-transparent bg, box shadow
 - Sidebar glassmorphism: dark purple bg, blur, border-left (right-side panel)
@@ -303,6 +310,18 @@ node --check public/js/admin.js
 ```
 
 ## Notes for LLMs
+
+### Editor maintenance rules and verification
+
+- Keep word wrap checked by default in the template and initialize `lineWrapping` from the checkbox state. Change the editor option rather than transforming paste text.
+- Keep the user's language choice separate from the effective highlighting language. Auto Detect must remain selected and continue reacting to edits; explicit selections must take priority over pending detection/downloads.
+- Resolve CodeMirror MIME types with `CodeMirror.resolveMode()`, not by splitting MIME strings. Several MIME names differ from their registered mode names.
+- Preserve shared mode-download promises, registration checks, retry feedback, and stale-request protection when changing lazy loading.
+- Keep suggestions non-inserting until the user accepts them, and preserve the existing save/navigation shortcuts. Describe completion coverage accurately rather than promising IDE-level semantic suggestions for every language.
+- For editor changes, check template compilation and JavaScript syntax when Node is available, then exercise the UI in a browser. Do not import `app.py` solely to validate templates: importing it connects to MongoDB, creates indexes, and starts the scheduler.
+- Session browser verification passed in Chromium: all 25 code modes load; Python colors/indentation/bracket pairing; manual JS/HTML/CSS/SQL hints; automatic hints; continuous detection; stale download handling; failed-download retry; default-on wrapping/toggle; mobile sidebar; no JavaScript runtime errors. The check used a temporary Flask template/static server without MongoDB. No permanent browser-test suite or Playwright dependency was added to the repository.
+
+### Existing application conventions
 
 1. **Templates use Jinja2** — `{{ paste }}` is auto-escaped. Use `{{ paste | tojson }}` for JS injection (line 83 of paste.html), and `{{ paste | safe }}` only if XSS is already mitigated by context (we use `textContent` instead).
 2. **Static base URL** — Controlled by `USE_CDN_STATIC`, not `FLASK_ENV`. When `USE_CDN_STATIC=true`, `static_base_url` is `STATIC_BASE_URL` (S3/CDN) and Flask does not serve `public/`. When `false`, `static_base_url` is `""` so templates resolve to relative `/css/...` paths; Flask serves `public/` locally/Docker, and on Vercel `public/**` is published via `@vercel/static` (`/css`, `/js`, `/img` routes in `vercel.json`). Templates should always use `{{ static_base_url }}/css/styles.css` not hardcoded paths.
