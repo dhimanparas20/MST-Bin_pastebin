@@ -87,6 +87,22 @@ body {
   background: #07000d !important;
 }
 
+.CodeMirror-hints.monokai {
+  background: #0a0014;
+  border: 1px solid #665588;
+  font-family: "Courier New", monospace;
+  max-width: min(28rem, 95vw);
+}
+
+.CodeMirror-hints.monokai .CodeMirror-hint {
+  color: #c8b8e8;
+}
+
+.CodeMirror-hints.monokai .CodeMirror-hint-active {
+  background: #6d28d9;
+  color: #f3e8ff;
+}
+
 #editorContainer {
   display: flex;
   height: 100%;
@@ -95,6 +111,7 @@ body {
 
 #editorContainer .CodeMirror {
   flex-grow: 1;
+  min-width: 0;
 }
 
 #pasteArea {

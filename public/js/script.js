@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const pasteArea = document.getElementById("pasteArea")
   const lineNumbers = document.getElementById("lineNumbers")
   const languageSelect = document.getElementById("languageSelect")
+  const languageStatus = document.getElementById("languageStatus")
   const wordWrap = document.getElementById("wordWrap")
   const customKeyInput = document.getElementById("customKey")
   const navPasteKey = document.getElementById("navPasteKey")
@@ -94,16 +95,18 @@ document.addEventListener("DOMContentLoaded", () => {
     "docker": "dockerfile", "cs": "csharp"
   }
 
-  const MODE_PARENT_MAP = {
-    csrc: "clike", "c++src": "clike", java: "clike", csharp: "clike", kotlin: "clike"
-  }
-
   let currentLanguage = "auto"
+  let activeLanguage = null
+  let modeRequestId = 0
+  const modeLoads = new Map()
 
   const editor = CodeMirror.fromTextArea(pasteArea, {
     lineNumbers: true, theme: "monokai", mode: null,
     lineWrapping: wordWrap.checked, viewportMargin: 100,
-    tabSize: 4, indentUnit: 4, indentWithTabs: false, autofocus: true
+    tabSize: 4, indentUnit: 4, indentWithTabs: false, autofocus: true,
+    smartIndent: true, matchBrackets: true,
+    hintOptions: { completeSingle: false },
+    extraKeys: { "Ctrl-Space": "autocomplete", "Cmd-Space": "autocomplete" }
   })
 
   wordWrap.addEventListener("change", () => {
@@ -123,29 +126,62 @@ document.addEventListener("DOMContentLoaded", () => {
     return null
   }
 
-  function setEditorMode(language) {
-    if (language === "auto") { editor.setOption("mode", null); return }
+  async function setEditorMode(language) {
+    const label = languageSelect.querySelector(`option[value="${language}"]`).textContent
+    languageStatus.textContent = currentLanguage === "auto"
+      ? (language === "plaintext" ? "Auto-detecting as you type" : `Detected: ${label}`)
+      : `Live highlighting: ${label}`
+    if (activeLanguage === language) return
+    activeLanguage = language
+    const requestId = ++modeRequestId
+    editor.closeHint()
+    editor.setOption("autoCloseBrackets", language !== "plaintext")
+    editor.setOption("autoCloseTags", language === "html" || language === "xml")
     const mime = MODE_MAP[language]
-    if (mime === undefined || mime === null) { editor.setOption("mode", null); return }
-    const modeName = mime.split("/").pop()
-    const parentMode = MODE_PARENT_MAP[modeName] || modeName
-    if (CodeMirror.modes.hasOwnProperty(parentMode)) { editor.setOption("mode", mime); return }
-    const scriptUrl = DYNAMIC_MODES[language]
-    if (scriptUrl) {
-      const script = document.createElement("script")
-      script.src = scriptUrl
-      script.onload = () => editor.setOption("mode", mime)
-      document.head.appendChild(script)
-    } else { editor.setOption("mode", null) }
+    editor.setOption("mode", null)
+    if (!mime) return
+    try {
+      const modeName = CodeMirror.resolveMode(mime).name
+      if (!CodeMirror.modes.hasOwnProperty(modeName)) {
+        const scriptUrl = DYNAMIC_MODES[language]
+        if (!scriptUrl) throw new Error("Language mode unavailable")
+        if (!modeLoads.has(scriptUrl)) {
+          modeLoads.set(scriptUrl, new Promise((resolve, reject) => {
+            const script = document.createElement("script")
+            script.src = scriptUrl
+            script.onload = resolve
+            script.onerror = () => {
+              modeLoads.delete(scriptUrl)
+              script.remove()
+              reject(new Error("Language mode failed to load"))
+            }
+            document.head.appendChild(script)
+          }))
+        }
+        await modeLoads.get(scriptUrl)
+        if (!CodeMirror.modes.hasOwnProperty(CodeMirror.resolveMode(mime).name)) {
+          modeLoads.delete(scriptUrl)
+          throw new Error("Language mode unavailable")
+        }
+      }
+      // A slower mode download must not override a newer language selection.
+      if (requestId === modeRequestId) editor.setOption("mode", mime)
+    } catch (error) {
+      if (requestId === modeRequestId) {
+        activeLanguage = null
+        languageStatus.textContent = `Could not load ${label}. Select the language again to retry.`
+      }
+    }
   }
 
   function autoDetectAndSwitch() {
     const code = editor.getValue()
     const detected = detectLanguage(code)
-    if (detected) { languageSelect.value = detected; currentLanguage = detected; setEditorMode(detected) }
+    setEditorMode(detected || "plaintext")
   }
 
   languageSelect.addEventListener("change", () => {
+    clearTimeout(pasteDetectTimer)
     currentLanguage = languageSelect.value
     if (currentLanguage === "auto") autoDetectAndSwitch()
     else setEditorMode(currentLanguage)
@@ -159,6 +195,19 @@ document.addEventListener("DOMContentLoaded", () => {
       pasteDetectTimer = setTimeout(autoDetectAndSwitch, 600)
     }
   })
+
+  editor.on("inputRead", (cm, change) => {
+    if (change.origin !== "+input" || cm.state.completionActive || activeLanguage === "plaintext") return
+    const cursor = cm.getCursor()
+    const beforeCursor = cm.getLine(cursor.line).slice(0, cursor.ch)
+    const token = cm.getTokenAt(cursor)
+    if (token.type && token.type.includes("comment")) return
+    if (change.text.length === 1 && /(?:[\w$]{2,}|[.<])$/.test(beforeCursor)) {
+      cm.showHint({ completeSingle: false })
+    }
+  })
+
+  autoDetectAndSwitch()
 
   // ===== SIDEBAR TOGGLE =====
   function openSidebar() {

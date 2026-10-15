@@ -207,9 +207,11 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - **`MODE_MAP`**: internal language name → CodeMirror MIME type
 - **`DYNAMIC_MODES`**: languages that load mode scripts lazily
 - **`HLJS_ALIAS_MAP`**: maps highlight.js language names to internal names (e.g., `"c++"→"cpp"`)
-- **`MODE_PARENT_MAP`**: maps MIME-derived names to parent modes (e.g., `"csrc"→"clike"`)
 - **`detectLanguage(code)`**: uses `hljs.highlightAuto()`, relevance ≥ 3 threshold, validates against MODE_MAP
-- **`setEditorMode(language)`**: checks `CodeMirror.modes` for loaded modes (using parent map), loads dynamically if needed
+- **`setEditorMode(language)`**: resolves MIME types via `CodeMirror.resolveMode()`, loads modes dynamically with shared promises and stale-request protection, updates the language status
+- **Editor assistance**: CodeMirror hint addons (automatic while typing and Ctrl+Space), smart indentation, matching/auto-closing brackets, HTML/XML tag closing; simple-mode addon supports languages such as Rust
+- **Word wrap**: `#wordWrap` checkbox is checked by default and toggles CodeMirror's `lineWrapping` without changing content
+- **Auto detection stays enabled**: choosing Auto Detect keeps the selector on `auto`; `#languageStatus` shows the detected language separately
 - **Auto-detect trigger**: on `editor.on("change")` when `currentLanguage === "auto"` (debounced 600ms)
 - **Save**: resolves "auto" language to detected before POSTing, includes optional `custom_key` and `description` if provided, heading/description length capped client-side, shows spinner + disables buttons during save, re-enables on error
 - **Load paste**: navbar `#navPasteKey` + Go (same as paste viewer); spaces in ID auto-replaced with `-`; `/` focuses the input
