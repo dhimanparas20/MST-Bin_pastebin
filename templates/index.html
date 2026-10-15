@@ -262,7 +262,9 @@
                 <ul class="text-xs sm:text-sm text-purple-200 space-y-1.5 font-mono">
                     <li><kbd class="kbd-hint">Ctrl</kbd>+<kbd class="kbd-hint">S</kbd> Save paste</li>
                     <li><kbd class="kbd-hint">Ctrl</kbd>+<kbd class="kbd-hint">N</kbd> New empty paste</li>
-                    <li><kbd class="kbd-hint">Ctrl</kbd>+<kbd class="kbd-hint">/</kbd> Open this info card</li>
+                    <li><kbd class="kbd-hint">Ctrl</kbd>+<kbd class="kbd-hint">Shift</kbd>+<kbd class="kbd-hint">K</kbd> Delete current line</li>
+                    <li><kbd class="kbd-hint">Ctrl</kbd>+<kbd class="kbd-hint">/</kbd> Toggle comment (current / selected lines)</li>
+                    <li><kbd class="kbd-hint">Ctrl</kbd>+<kbd class="kbd-hint">Shift</kbd>+<kbd class="kbd-hint">/</kbd> Open this info card</li>
                     <li><kbd class="kbd-hint">Esc</kbd> Close modal / sidebar</li>
                     <li><kbd class="kbd-hint">/</kbd> Focus paste ID (viewer)</li>
                     <li><kbd class="kbd-hint">Ctrl</kbd>+<kbd class="kbd-hint">Shift</kbd>+<kbd class="kbd-hint">C</kbd> Copy paste content (viewer)</li>
@@ -304,6 +306,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closetag.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/anyword-hint.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/javascript-hint.min.js"></script>
@@ -333,7 +336,7 @@
             if (e.target === this) this.style.display = 'none';
         });
         document.addEventListener('keydown', function(e) {
-            if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.code === 'Slash' || e.key === '?' || e.key === '/')) {
                 e.preventDefault();
                 document.getElementById('aboutModal').style.display = 'flex';
             }

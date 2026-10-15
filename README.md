@@ -31,7 +31,7 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 - **Responsive hamburger sidebar** — all settings in a right-side panel, auto-open on desktop, drawer on mobile
 - **Paste info flyout** — on paste view, toggleable right panel with title, description, ID, language, views, expiry, lock/view-once badges
 - **Centered title** — paste header: logo + language + key on the left, title centered, controls on the right
-- **Keyboard shortcuts** — Ctrl+S save, Ctrl+N new paste, Ctrl+/ about, Esc close, `/` focus paste ID, Ctrl+Shift+C copy, Ctrl+I paste info (listed in About card)
+- **Keyboard shortcuts** — Ctrl+S save, Ctrl+N new paste, Ctrl+Shift+K delete line (editor), Ctrl+/ toggle comment (editor), Ctrl+Shift+/ About (editor), Ctrl+/ About (viewer), Esc close, `/` focus paste ID, Ctrl+Shift+C copy, Ctrl+I paste info (listed in About card)
 - One-click copy button on paste view
 - **Size limit** — configurable max paste size (default 10,000 chars)
 
@@ -42,6 +42,7 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 - **Suggestions:** supported code modes show suggestions while typing. Press **Ctrl+Space** to request them manually, use the arrow keys to navigate, **Enter/Tab** to accept, and **Esc** to dismiss. Automatic suggestions skip comments and plain-text mode.
 - **Completion coverage:** JavaScript, CSS, SQL, and HTML have dedicated hint addons; XML hints depend on available schema information. Other modes can offer registered keyword hints or words already in the paste. These are browser-side completions, not AI suggestions or project-aware language-server analysis.
 - **Indentation and pairing:** Enter uses the current mode's smart indentation with a four-space indent setting. Code modes match and auto-close brackets; HTML/XML also close tags. Support varies by language mode.
+- **Line shortcuts:** with focus in the editor, **Ctrl+Shift+K** deletes the current line (or selected lines), and **Ctrl+/** toggles comments on the current or selected lines using the effective language mode's comment syntax. Plain text and modes without comment syntax are left unchanged. Left and right Ctrl keys both work; Command equivalents are available on macOS. **Ctrl+Shift+/** opens About in the editor; the viewer retains **Ctrl+/** for About.
 - **Language downloads:** less-common modes load on demand. A failed download shows feedback below the selector; switch away and select that language again to retry. Late downloads cannot overwrite a newer language selection.
 
 ### Admin Dashboard (`/admin`)

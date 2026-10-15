@@ -106,7 +106,11 @@ document.addEventListener("DOMContentLoaded", () => {
     tabSize: 4, indentUnit: 4, indentWithTabs: false, autofocus: true,
     smartIndent: true, matchBrackets: true,
     hintOptions: { completeSingle: false },
-    extraKeys: { "Ctrl-Space": "autocomplete", "Cmd-Space": "autocomplete" }
+    extraKeys: {
+      "Ctrl-Space": "autocomplete", "Cmd-Space": "autocomplete",
+      "Shift-Ctrl-K": "deleteLine", "Shift-Cmd-K": "deleteLine",
+      "Ctrl-/": "toggleComment", "Cmd-/": "toggleComment"
+    }
   })
 
   wordWrap.addEventListener("change", () => {

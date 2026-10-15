@@ -168,7 +168,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - **Navbar**: logo, paste ID + Go (load paste), Save (when sidebar closed), new paste, about, hamburger
 - **Save button**: also at sidebar bottom when open; spinner + disabled during save
 - **Editor controls/status**: `#languageStatus` announces detected/selected language or loading failures; `#editorHelp` explains completions; labeled native `#wordWrap` checkbox below the language selector is checked by default. Live highlighting is the pre-save preview.
-- **About modal**: feature list + keyboard shortcuts (`kbd-hint` styles); Ctrl+/ opens it, Esc closes
+- **About modal**: feature list + keyboard shortcuts (`kbd-hint` styles); Ctrl+Shift+/ opens it in the editor, Esc closes. Ctrl+/ is reserved for toggling comments inside CodeMirror.
 - Editor via `<textarea id="pasteArea">` transformed by `CodeMirror.fromTextArea()`
 
 ### `templates/paste.html`
@@ -224,7 +224,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - **Lock toggle**: shows/hides `#passwordSection`, swaps lock SVG icons, sends password in POST body
 - **Expiry toggle**: shows/hides `#expirySection` (value + unit), sends expiry_value/expiry_unit in POST body
 - **View-once toggle**: toggles `view_once` boolean, sends in POST body
-- **Keyboard shortcuts**: Ctrl+S save, Ctrl+N new empty paste (`/`), Esc closes mobile sidebar, `/` focus paste ID
+- **Keyboard shortcuts**: Ctrl+S save, Ctrl+N new empty paste (`/`), Ctrl+Shift+K deletes current/selected lines, Ctrl+/ toggles language-aware comments, Ctrl+Shift+/ opens About, Esc closes mobile sidebar, `/` focus paste ID. CodeMirror `extraKeys` scopes delete/comment commands to the editor; Command equivalents are registered. The comment addon must load before initialization; unsupported comment syntax is a no-op.
 - **Ctrl+V anywhere**: focuses editor and pastes clipboard content when no input/textarea/select is active
 - **Eye icon toggle**: switches password input type between `password` and `text`
 - **Custom key**: live input replaces whitespace with `-`; regex `^[a-zA-Z0-9_-]{4,40}$` after normalization; password still rejects spaces
@@ -318,6 +318,8 @@ node --check public/js/admin.js
 - Resolve CodeMirror MIME types with `CodeMirror.resolveMode()`, not by splitting MIME strings. Several MIME names differ from their registered mode names.
 - Preserve shared mode-download promises, registration checks, retry feedback, and stale-request protection when changing lazy loading.
 - Keep suggestions non-inserting until the user accepts them, and preserve the existing save/navigation shortcuts. Describe completion coverage accurately rather than promising IDE-level semantic suggestions for every language.
+- Keep Ctrl+/ for CodeMirror's `toggleComment` and Ctrl+Shift+K for `deleteLine`; use the comment addon and mode-provided syntax rather than hardcoded language markers. Keep editor About on Ctrl+Shift+/ to avoid a collision; viewer About remains Ctrl+/. Handle shifted slash (`?`) in the editor About shortcut.
+- CodeMirror 5 raw `extraKeys` uses canonical modifier order: register deletion as `Shift-Ctrl-K` / `Shift-Cmd-K`. Browser checks passed for current/last/selected-line deletion and undo, Python/JS/HTML/CSS/SQL comment toggling, right Ctrl, plaintext no-op, editor-only scope, and shifted-slash About/Escape handling.
 - For editor changes, check template compilation and JavaScript syntax when Node is available, then exercise the UI in a browser. Do not import `app.py` solely to validate templates: importing it connects to MongoDB, creates indexes, and starts the scheduler.
 - Session browser verification passed in Chromium: all 25 code modes load; Python colors/indentation/bracket pairing; manual JS/HTML/CSS/SQL hints; automatic hints; continuous detection; stale download handling; failed-download retry; default-on wrapping/toggle; mobile sidebar; no JavaScript runtime errors. The check used a temporary Flask template/static server without MongoDB. No permanent browser-test suite or Playwright dependency was added to the repository.
 
@@ -335,5 +337,5 @@ node --check public/js/admin.js
 10. **Encryption** — Fernet (AES-256-CBC + HMAC-SHA256). Key derived via SHA-256 of the secret. Password-protected pastes use user password as encryption key. Server-encrypted pastes use ENCRYPTION_KEY. Fernet instances are cached for performance.
 11. **Reserved routes** — `GetPaste` skips keys `admin`, `api`, `health` to prevent route shadowing.
 12. **Error handling** — `request.get_json(silent=True) or {}` prevents AttributeError on malformed JSON. `PyMongoError` handler returns 503. Decryption failures return placeholder text (not raw exception).
-13. **Keyboard shortcuts** — Documented in About modal on both editor and viewer: Ctrl+S save, Ctrl+N new paste, Ctrl+/ about, Esc close modals/panels, `/` focus paste ID (viewer), Ctrl+Shift+C copy (viewer), Ctrl+I toggle paste info flyout (viewer). Do not use Ctrl+Shift+I (browser DevTools).
+13. **Keyboard shortcuts** — Documented in About modals: Ctrl+S save, Ctrl+N new paste; editor Ctrl+Shift+K delete line, Ctrl+/ toggle comment, Ctrl+Shift+/ About; viewer Ctrl+/ About, Ctrl+Shift+C copy, Ctrl+I paste info; Esc close modals/panels, `/` focus paste ID. Do not use Ctrl+Shift+I (browser DevTools).
 14. **Custom key / title limits** — Custom key: spaces/whitespace auto-replaced with `-`, then must match `^[a-zA-Z0-9_-]{4,40}$` (client + server). Title truncated to 40 chars. Description truncated to 100 chars. Load-paste ID inputs also normalize spaces→`-`.
