@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const pasteArea = document.getElementById("pasteArea")
   const lineNumbers = document.getElementById("lineNumbers")
   const languageSelect = document.getElementById("languageSelect")
+  const wordWrap = document.getElementById("wordWrap")
   const customKeyInput = document.getElementById("customKey")
   const navPasteKey = document.getElementById("navPasteKey")
   const navPasteGo = document.getElementById("navPasteGo")
@@ -101,8 +102,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const editor = CodeMirror.fromTextArea(pasteArea, {
     lineNumbers: true, theme: "monokai", mode: null,
-    lineWrapping: false, viewportMargin: 100,
+    lineWrapping: wordWrap.checked, viewportMargin: 100,
     tabSize: 4, indentUnit: 4, indentWithTabs: false, autofocus: true
+  })
+
+  wordWrap.addEventListener("change", () => {
+    editor.setOption("lineWrapping", wordWrap.checked)
   })
 
   lineNumbers.style.display = "none"
