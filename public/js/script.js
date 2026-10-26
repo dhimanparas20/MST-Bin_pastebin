@@ -117,6 +117,14 @@ document.addEventListener("DOMContentLoaded", () => {
     editor.setOption("lineWrapping", wordWrap.checked)
   })
 
+  // CodeMirror doesn't auto-refresh when its container is resized by CSS/media
+  // queries, so re-measure after the sidebar toggle animation finishes.
+  let editorRefreshTimer = null
+  function scheduleEditorRefresh() {
+    clearTimeout(editorRefreshTimer)
+    editorRefreshTimer = setTimeout(() => editor.refresh(), 320)
+  }
+
   lineNumbers.style.display = "none"
 
   function detectLanguage(code) {
@@ -226,6 +234,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     saveBtnTop.classList.add("hidden")
     saveBtnSide.classList.remove("hidden")
+    scheduleEditorRefresh()
   }
 
   function closeSidebar() {
@@ -237,6 +246,7 @@ document.addEventListener("DOMContentLoaded", () => {
     mainContent.style.marginRight = "0"
     saveBtnTop.classList.remove("hidden")
     saveBtnSide.classList.add("hidden")
+    scheduleEditorRefresh()
   }
 
   hamburgerBtn.addEventListener("click", () => {
@@ -259,6 +269,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (window.innerWidth < 640 && sidebarOpen) {
       closeSidebar()
     }
+    scheduleEditorRefresh()
   })
 
   // ===== LOCK TOGGLE =====
