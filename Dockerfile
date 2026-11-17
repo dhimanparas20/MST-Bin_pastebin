@@ -45,7 +45,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 EXPOSE 5000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --start-interval=2s --retries=3 \
-    CMD curl -f http://localhost:5000/ || exit 1
+    CMD curl -f http://localhost:5000/health || exit 1
 
 CMD ["sh", "-c", "\
     uv run gunicorn \
@@ -56,6 +56,6 @@ CMD ["sh", "-c", "\
         --worker-tmp-dir /dev/shm \
         --access-logfile - \
         --error-logfile - \
-        ${GUNICORN_RELOAD:+--reload} \
+        $( [ \"$GUNICORN_RELOAD\" = true ] && echo --reload ) \
         app:app \
 "]

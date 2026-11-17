@@ -10,7 +10,7 @@ import re
 import secrets
 import string
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta
 from functools import wraps
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -43,6 +43,12 @@ ALLOWED_LANGUAGES = {
     'perl', 'dockerfile', 'nginx'
 }
 IP_REGEX = re.compile(r'^\d{1,3}(\.\d{1,3}){3}$|^[a-fA-F0-9:]+$')
+# Prefixes exclude "_" so the separator in "<prefix>_<id>" is unambiguous.
+PREFIX_REGEX = re.compile(r'^[a-zA-Z0-9-]{1,15}$')
+CUSTOM_KEY_REGEX = re.compile(r'^[a-zA-Z0-9_-]{4,40}$')
+# Longest stored key: 15-char prefix + "_" + 40-char custom key.
+STORED_KEY_REGEX = re.compile(r'^[a-zA-Z0-9_-]{1,56}$')
+PREFIX_SEARCH_LIMIT = 50
 
 app: Flask = None
 
@@ -163,12 +169,18 @@ def _get_user_ip():
     return request.remote_addr or "unknown"
 
 
-def generate_key():
+def normalize_prefix(raw):
+    """Trim, turn whitespace into "-" and drop a trailing "_" the user may have typed."""
+    return re.sub(r'\s+', '-', (raw or '').strip()).rstrip('_')
+
+
+def generate_key(prefix=''):
     key_length = int(os.getenv("KEY_LENGTH", "6"))
     chars = string.ascii_letters + string.digits
+    head = f'{prefix}_' if prefix else ''
     max_retries = 10
     for _ in range(max_retries):
-        key = "".join(random.choices(chars, k=key_length))
+        key = head + "".join(random.choices(chars, k=key_length))
         try:
             pastes_collection.insert_one({'_id': key, 'key': key, '_temp': True})
             pastes_collection.delete_one({'_id': key, '_temp': True})
@@ -203,32 +215,65 @@ def format_expiry(expires_at):
     return f"Expires in {months} month" if months == 1 else f"Expires in {months} months"
 
 
-_fernet_cache = {}
-
-
 def _derive_fernet_key(secret):
     digest = hashlib.sha256(secret.encode()).digest()
     return base64.urlsafe_b64encode(digest)
 
 
-def _get_fernet(key):
-    if key not in _fernet_cache:
-        _fernet_cache[key] = Fernet(key)
-    return _fernet_cache[key]
+# Built once at startup; read-only afterwards, so safe to share across threads.
+# Password-derived instances are created per request and never cached, so user
+# password material is not kept in memory.
+SERVER_FERNET = Fernet(_derive_fernet_key(ENCRYPTION_KEY)) if ENCRYPTION_KEY else None
 
 
-def _get_encryption_key():
-    if ENCRYPTION_KEY:
-        return _derive_fernet_key(ENCRYPTION_KEY)
-    return None
+def _password_fernet(password):
+    return Fernet(_derive_fernet_key(password))
 
 
-def _encrypt(plaintext, key):
-    return _get_fernet(key).encrypt(plaintext.encode()).decode()
+def _encrypt(plaintext, fernet):
+    return fernet.encrypt(plaintext.encode()).decode()
 
 
-def _decrypt(ciphertext, key):
-    return _get_fernet(key).decrypt(ciphertext.encode()).decode()
+def _decrypt(ciphertext, fernet):
+    if fernet is None:
+        raise ValueError('Encryption key not configured')
+    return fernet.decrypt(ciphertext.encode()).decode()
+
+
+# Keys of pastes this browser just created. Lets the creator's post-save redirect
+# skip the view counter without exposing a public bypass (the session is signed).
+FRESH_PASTES_SESSION_KEY = 'fresh_pastes'
+FRESH_PASTES_LIMIT = 5
+
+
+def _remember_fresh_paste(key):
+    fresh = [k for k in session.get(FRESH_PASTES_SESSION_KEY, []) if k != key]
+    fresh.append(key)
+    session[FRESH_PASTES_SESSION_KEY] = fresh[-FRESH_PASTES_LIMIT:]
+
+
+def _consume_fresh_paste(key):
+    fresh = session.get(FRESH_PASTES_SESSION_KEY, [])
+    if key not in fresh:
+        return False
+    session[FRESH_PASTES_SESSION_KEY] = [k for k in fresh if k != key]
+    return True
+
+
+def _delete_expired_pastes():
+    """Delete pastes past their expiry time, consumed view-once pastes and pastes at their view limit."""
+    now = int(time.time())
+    by_time = pastes_collection.delete_many({'expires_at': {'$exists': True, '$ne': None, '$lt': now}})
+    view_once = pastes_collection.delete_many({'view_once': True, 'open_count': {'$gte': 1}})
+    max_views = pastes_collection.delete_many({
+        'max_views': {'$exists': True, '$ne': None},
+        '$expr': {'$lte': ['$max_views', '$open_count']},
+    })
+    return {
+        'expired': by_time.deleted_count,
+        'view_once': view_once.deleted_count,
+        'max_views': max_views.deleted_count,
+    }
 
 
 def _render_paste_page(**kwargs):
@@ -262,6 +307,7 @@ class SavePaste(Resource):
         if language not in ALLOWED_LANGUAGES:
             language = "plaintext"
         custom_key = (json_data.get("custom_key", "") or "").strip()
+        prefix = normalize_prefix(json_data.get("prefix", ""))
         password = (json_data.get("password", "") or "").strip()
         expiry_value = json_data.get("expiry_value")
         expiry_unit = json_data.get("expiry_unit")
@@ -281,22 +327,24 @@ class SavePaste(Resource):
             if len(password) > 128:
                 return {"error": "Password must be 128 characters or fewer"}, 400
 
+        if prefix and not PREFIX_REGEX.match(prefix):
+            return {'error': 'Prefix must be 1-15 characters (a-z, A-Z, 0-9, -)'}, 400
+
         if custom_key:
             custom_key = re.sub(r'\s+', '-', custom_key)
-            if not re.match(r'^[a-zA-Z0-9_-]{4,40}$', custom_key):
+            if not CUSTOM_KEY_REGEX.match(custom_key):
                 return {'error': 'Custom key must be 4-40 characters (a-z, A-Z, 0-9, -, _)'}, 400
-            if pastes_collection.find_one({'key': custom_key}):
+            key = f'{prefix}_{custom_key}' if prefix else custom_key
+            if pastes_collection.find_one({'key': key}):
                 return {'error': 'This custom key is already taken. Please choose another.'}, 409
-            key = custom_key
         else:
-            key = generate_key()
+            key = generate_key(prefix)
 
         encrypted_data = data
         if password:
-            pw_key = _derive_fernet_key(password)
-            encrypted_data = _encrypt(data, pw_key)
-        elif ENCRYPTION_KEY:
-            encrypted_data = _encrypt(data, _get_encryption_key())
+            encrypted_data = _encrypt(data, _password_fernet(password))
+        elif SERVER_FERNET:
+            encrypted_data = _encrypt(data, SERVER_FERNET)
 
         paste = {
             'key': key,
@@ -355,6 +403,8 @@ class SavePaste(Resource):
             pastes_collection.insert_one(paste)
         except DuplicateKeyError:
             return {"error": "Key collision occurred, please try again"}, 409
+        if view_once or 'max_views' in paste:
+            _remember_fresh_paste(key)
         return {"url": f"{request.host_url}{key}"}, 201
 
 
@@ -390,7 +440,6 @@ class GetPaste(Resource):
         created_at = paste.get("created_at")
         encrypted_with = paste.get("encrypted_with")
         password_protected = "password_hash" in paste
-        skip_increment = request.args.get("new") == "1"
         meta = dict(
             heading=heading,
             description=description,
@@ -409,13 +458,13 @@ class GetPaste(Resource):
         if password_protected:
             return _render_paste_page(paste="", password_required=True, **meta)
 
-        if not skip_increment:
+        if not _consume_fresh_paste(key):
             pastes_collection.update_one({'key': key}, {'$inc': {'open_count': 1}})
 
         paste_data = paste['data']
         if encrypted_with == 'server':
             try:
-                paste_data = _decrypt(paste_data, _get_encryption_key())
+                paste_data = _decrypt(paste_data, SERVER_FERNET)
             except Exception:
                 paste_data = '[Decryption failed]'
 
@@ -446,7 +495,7 @@ class AccessPaste(Resource):
             paste_data = paste["data"]
             if paste.get('encrypted_with') == 'server':
                 try:
-                    paste_data = _decrypt(paste_data, _get_encryption_key())
+                    paste_data = _decrypt(paste_data, SERVER_FERNET)
                 except Exception:
                     paste_data = '[Decryption failed]'
             return {
@@ -465,9 +514,8 @@ class AccessPaste(Resource):
         pastes_collection.update_one({"key": key}, {"$inc": {"open_count": 1}})
         paste_data = paste["data"]
         if paste.get('encrypted_with') == 'password':
-            pw_key = _derive_fernet_key(password)
             try:
-                paste_data = _decrypt(paste_data, pw_key)
+                paste_data = _decrypt(paste_data, _password_fernet(password))
             except Exception:
                 paste_data = '[Decryption failed]'
         return {
@@ -495,6 +543,55 @@ def health():
         }), 200
     except Exception:
         return jsonify({"status": "unhealthy"}), 503
+
+
+@app.route('/api/search')
+def api_search_prefix():
+    """Public prefix search: metadata of live pastes whose key starts with "<prefix>_".
+
+    Never returns paste content or the creator's IP, and does not count a view.
+    """
+    prefix = normalize_prefix(request.args.get('prefix', ''))
+    if not PREFIX_REGEX.match(prefix):
+        return jsonify({'error': 'Prefix must be 1-15 characters (a-z, A-Z, 0-9, -)'}), 400
+
+    now = int(time.time())
+    query = {
+        'key': {'$regex': f'^{re.escape(prefix)}_', '$options': 'i'},
+        # Leave out pastes that the next view would delete anyway.
+        '$nor': [
+            {'expires_at': {'$lt': now}},
+            {'view_once': True, 'open_count': {'$gte': 1}},
+            {'max_views': {'$type': 'number'}, '$expr': {'$lte': ['$max_views', '$open_count']}},
+        ],
+    }
+    projection = {'data': 0, 'ip_address': 0, 'password_hash': 0, '_id': 0}
+    total = pastes_collection.count_documents(query)
+    docs = pastes_collection.find(query, projection).sort('created_at', DESCENDING).limit(PREFIX_SEARCH_LIMIT)
+
+    results = []
+    for p in docs:
+        results.append({
+            'key': p.get('key', ''),
+            'heading': p.get('heading', 'My Paste'),
+            'description': p.get('description', ''),
+            'language': p.get('language', 'plaintext'),
+            'created_at': p.get('created_at'),
+            'expires_at': p.get('expires_at'),
+            'expires_text': format_expiry(p.get('expires_at')),
+            'open_count': p.get('open_count', 0),
+            'max_views': p.get('max_views'),
+            'view_once': bool(p.get('view_once')),
+            'password_protected': p.get('encrypted_with') == 'password',
+            'encrypted_with': p.get('encrypted_with'),
+        })
+
+    return jsonify({
+        'prefix': prefix,
+        'results': results,
+        'total': total,
+        'limit': PREFIX_SEARCH_LIMIT,
+    })
 
 
 def admin_required(f):
@@ -626,7 +723,7 @@ def api_admin_paste_detail(key):
 
     if encrypted_with == 'server':
         try:
-            paste_data = _decrypt(paste_data, _get_encryption_key())
+            paste_data = _decrypt(paste_data, SERVER_FERNET)
         except Exception:
             paste_data = '[Decryption failed]'
     elif encrypted_with == 'password':
@@ -678,7 +775,7 @@ def api_admin_batch_delete_pastes():
         key = raw.strip()
         if not key or key in seen:
             continue
-        if not re.match(r'^[a-zA-Z0-9_-]{1,40}$', key):
+        if not STORED_KEY_REGEX.match(key):
             return jsonify({'error': f'Invalid key: {key[:50]}'}), 400
         seen.add(key)
         cleaned.append(key)
@@ -699,20 +796,9 @@ def api_admin_batch_delete_pastes():
 @app.route('/api/admin/delete-expired', methods=['DELETE'])
 @admin_required
 def api_admin_delete_expired():
-    now = int(time.time())
-    expired_by_time = pastes_collection.delete_many({'expires_at': {'$exists': True, '$ne': None, '$lt': now}})
-    expired_view_once = pastes_collection.delete_many({'view_once': True, 'open_count': {'$gte': 1}})
-    max_views_pastes = pastes_collection.find({
-        'max_views': {'$exists': True, '$ne': None},
-        '$expr': {'$lte': ['$max_views', '$open_count']}
-    })
-    max_views_keys = [p['key'] for p in max_views_pastes]
-    expired_max_views = 0
-    if max_views_keys:
-        result = pastes_collection.delete_many({'key': {'$in': max_views_keys}})
-        expired_max_views = result.deleted_count
-    total_deleted = expired_by_time.deleted_count + expired_view_once.deleted_count + expired_max_views
-    logger.info(f"Admin deleted {total_deleted} expired pastes")
+    counts = _delete_expired_pastes()
+    total_deleted = sum(counts.values())
+    logger.info(f"Admin deleted {total_deleted} expired pastes {counts}")
     return jsonify({'ok': True, 'deleted': total_deleted, 'message': f'Deleted {total_deleted} expired pastes'})
 
 
@@ -775,21 +861,44 @@ api.add_resource(GetPaste, "/<string:key>")
 api.add_resource(Index, "/")
 
 
+CLEANUP_INTERVAL_SECONDS = 7 * 24 * 3600
+# Each Gunicorn worker runs its own scheduler. Workers claim the run through this
+# document so only the first one in a cycle does the cleanup.
+scheduler_locks = db['scheduler_locks']
+
+
+def _claim_scheduled_run(job_id, interval_seconds):
+    now = int(time.time())
+    # Allow an hour of slack so normal timer drift never skips a cycle.
+    next_run = now + interval_seconds - 3600
+    try:
+        # Matches when the cycle is due; inserts on the very first run. When the
+        # document exists but is not due, the upsert collides on _id instead.
+        scheduler_locks.update_one(
+            {'_id': job_id, 'next_run': {'$lte': now}},
+            {'$set': {'next_run': next_run, 'last_run': now}},
+            upsert=True,
+        )
+    except DuplicateKeyError:
+        return False
+    return True
+
+
 def delete_pastes():
+    if not _claim_scheduled_run('delete_pastes', CLEANUP_INTERVAL_SECONDS):
+        logger.info("Scheduled cleanup already handled by another worker")
+        return
+
     logger.info(f"Running scheduled cleanup at {datetime.now()}")
-    threshold = int(time.time()) - (7 * 24 * 3600)
+    threshold = int(time.time()) - CLEANUP_INTERVAL_SECONDS
     result = pastes_collection.delete_many({"open_count": {"$lt": 2}, "created_at": {"$lt": threshold}})
     logger.info(f"Deleted {result.deleted_count} old low-view pastes")
 
-    now = int(time.time())
-    expired = pastes_collection.delete_many({'expires_at': {'$exists': True, '$ne': None, '$lt': now}})
-    logger.info(f"Deleted {expired.deleted_count} expired pastes")
-
-    viewed = pastes_collection.delete_many({'view_once': True, 'open_count': {'$gte': 1}})
-    logger.info(f"Deleted {viewed.deleted_count} viewed-once pastes")
+    counts = _delete_expired_pastes()
+    logger.info(f"Deleted expired pastes {counts}")
 
 
-scheduler.add_job(delete_pastes, "interval", days=7)
+scheduler.add_job(delete_pastes, "interval", seconds=CLEANUP_INTERVAL_SECONDS)
 
 if FLASK_ENV != "prod":
     _ensure_indexes()

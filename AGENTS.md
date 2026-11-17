@@ -12,7 +12,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 ├── pyproject.toml          # Project dependencies (uv)
 ├── uv.lock                 # Locked dependency versions
 ├── Dockerfile              # Docker image
-├── docker-compose.yaml     # Gunicorn 4 workers, port 80→5000
+├── docker-compose.yaml     # Gunicorn 4 workers, port 5000→5000, GUNICORN_RELOAD=true
 ├── env_sample              # Template for .env file
 ├── vercel.json             # Vercel deployment config
 ├── README.md               # Human-facing docs
@@ -28,6 +28,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
     │   └── admin.css       # Admin panel styles: dark purple theme, tables, modals
     ├── js/
     │   ├── script.js       # Editor logic: CodeMirror init, language detection, save, sidebar
+    │   ├── prefix-search.js # Prefix search modal (shared by index.html and paste.html)
     │   └── admin.js        # Admin logic: analytics, CRUD, charts, pagination, search/filter
     └── img/
         ├── favicon.ico
@@ -42,12 +43,13 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 [Browser: index.html + script.js]
     │  CodeMirror editor: live syntax colors, continuous auto-detection, hints, smart indentation, word wrap on by default
     │  Hamburger sidebar (desktop open, mobile hidden)
-    │  Sidebar: title (max 40), custom key (4-40), load paste, language, description textarea (optional, max 100, multi-line), lock, expiry, view-once, max-views
+    │  Sidebar: title (max 40), custom key (4-40), ID prefix (1-15, live ID preview), load paste, language, description textarea (optional, max 100, multi-line), lock, expiry, view-once, max-views
     │
-    ▼ POST /api/save  {data, heading, language, description?, custom_key?, password?, expiry_value?, expiry_unit?, view_once?, max_views?}
+    ▼ POST /api/save  {data, heading, language, description?, custom_key?, prefix?, password?, expiry_value?, expiry_unit?, view_once?, max_views?}
 [Flask: app.py → SavePaste]
     │  Validates size ≤ MAX_PASTE_SIZE, heading max 40, description max 100 (stored only if non-empty),
     │  validates custom_key (4-40 alphanumeric/-/_; spaces auto-replaced with `-`),
+    │  validates prefix (1-15, [a-zA-Z0-9-], no `_`); key = prefix_custom_key | prefix_<random> | custom_key | <random>,
     │  checks uniqueness if custom_key provided, else generates random key (unique index + DuplicateKeyError),
     │  hashes password with werkzeug.security if provided (no spaces allowed),
     │  encrypts with Fernet (AES-256) if ENCRYPTION_KEY set or password provided,
@@ -128,16 +130,21 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 
 **Helper Functions**
 - `_get_user_ip()` — validates X-Forwarded-For against IP regex, falls back to remote_addr
-- `generate_key()` — random alphanumeric key, uses unique index check + DuplicateKeyError, max 10 retries
+- `normalize_prefix(raw)` — trim, whitespace→`-`, strip trailing `_`
+- `generate_key(prefix='')` — `[prefix_]` + random alphanumeric (`KEY_LENGTH`), reserved via a temp insert + DuplicateKeyError, max 10 retries
 - `format_expiry(expires_at)` — human-readable "Expires in X days/hours/mins/secs"
 - `_derive_fernet_key(secret)` — SHA-256 → base64 for Fernet key derivation
-- `_get_fernet(key)` — cached Fernet instances (thread-safe, avoids re-init)
-- `_encrypt(plaintext, key)` / `_decrypt(ciphertext, key)` — Fernet AES-256
+- `SERVER_FERNET` — built once at startup from `ENCRYPTION_KEY` (or `None`); read-only, safe across threads
+- `_password_fernet(password)` — per-request Fernet for password pastes; never cached so password material is not retained
+- `_encrypt(plaintext, fernet)` / `_decrypt(ciphertext, fernet)` — Fernet (AES-128-CBC + HMAC-SHA256); `_decrypt` raises if `fernet` is `None`
+- `_remember_fresh_paste(key)` / `_consume_fresh_paste(key)` — signed-session list (last 5) of view-once/max-views pastes this browser just saved; the creator's post-save redirect consumes it instead of incrementing `open_count`
+- `_delete_expired_pastes()` — shared by the admin cleanup route and the scheduler: expired by time + viewed-once + max-views reached (`$expr`); returns per-category counts
 - `_render_paste_page(**kwargs)` — shared defaults for paste.html (heading, description, max_views, created_at, encrypted_with, password_protected, etc.)
 
 **Resources**
-- `SavePaste` — POST `/api/save`: validates JSON body (get_json silent=True), heading max 40 chars, description max 100 (optional, omitted from doc if empty), language whitelist, size check, password validation (no spaces, max 128), custom_key spaces→`-` then 4-40 format + uniqueness, encrypts if password or ENCRYPTION_KEY, DuplicateKeyError handling
-- `GetPaste` — GET `/<key>`: skips reserved keys (admin/api/health), checks expiry/view_once/max_views (deletes if violated), increments open_count, decrypts server-encrypted, renders paste.html via `_render_paste_page`
+- `SavePaste` — POST `/api/save`: validates JSON body (get_json silent=True), heading max 40 chars, description max 100 (optional, omitted from doc if empty), language whitelist, size check, password validation (no spaces, max 128), custom_key spaces→`-` then 4-40 format + uniqueness, optional `prefix` via `normalize_prefix()` + `PREFIX_REGEX` (combined as `prefix_custom_key` or passed to `generate_key(prefix)`), encrypts if password or ENCRYPTION_KEY, DuplicateKeyError handling, remembers view-once/max-views keys in the session (`_remember_fresh_paste`)
+- `GET /api/search?prefix=` (`api_search_prefix`) — public, no auth. Anchored case-insensitive regex `^<escaped prefix>_` on `key`; `$nor` drops expired, consumed view-once and max-views-reached pastes; projection excludes `data`, `ip_address`, `password_hash`; sorted by `created_at` desc, limited to `PREFIX_SEARCH_LIMIT` (50) with a `total` count. Does not touch `open_count`
+- `GetPaste` — GET `/<key>`: skips reserved keys (admin/api/health), checks expiry/view_once/max_views (deletes if violated), increments open_count, decrypts server-encrypted, renders paste.html via `_render_paste_page`. Skips the increment only when `_consume_fresh_paste(key)` succeeds (no public query-string bypass)
 - `AccessPaste` — POST `/api/access/<key>`: checks expiry/view_once/max_views, validates password with check_password_hash, always increments open_count (consistent with GetPaste), decrypts with user password, returns description in JSON
 - `Index` — GET `/`: renders index.html
 
@@ -149,13 +156,14 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - `GET /api/admin/pastes` — paginated list with search (re.escape), language/encryption filters, sort, server-side skip/limit
 - `GET /api/admin/paste/<key>` — full detail with decryption for server-encrypted pastes
 - `DELETE /api/admin/paste/<key>` — single paste deletion
-- `DELETE /api/admin/pastes` — batch delete `{keys: [...]}` (max 100; each key must match `^[a-zA-Z0-9_-]{1,40}$`)
+- `DELETE /api/admin/pastes` — batch delete `{keys: [...]}` (max 100; each key must match `STORED_KEY_REGEX` `^[a-zA-Z0-9_-]{1,56}$`: 15-char prefix + `_` + 40-char custom key)
 - `DELETE /api/admin/delete-expired` — bulk cleanup: expired by time + viewed-once + max-views (uses $expr for field comparison)
 - `GET /api/admin/analytics` — total pastes, views, avg views, per-day/week/month counts, password/view-once/encrypted counts, language distribution, encryption distribution
-- `GET /health` — MongoDB ping, returns `{status: "healthy/unhealthy"}`
+- `GET /health` — MongoDB ping, returns `{status: "healthy/unhealthy"}`; used by the Docker `HEALTHCHECK`
 
 **Scheduler**
-- `delete_pastes()` — runs every 7 days: deletes low-view old pastes + expired by time + viewed-once pastes
+- `delete_pastes()` — runs every 7 days: deletes old pastes with `open_count < 2`, then calls `_delete_expired_pastes()`
+- Every Gunicorn worker starts a scheduler; `_claim_scheduled_run()` upserts on `scheduler_locks` (`_id` = job id, `next_run`) so only one worker runs each cycle. A `DuplicateKeyError` means another worker already claimed it
 - `scheduler.start()` called both in `__main__` and at module level (works under Gunicorn)
 
 ### `templates/index.html`
@@ -164,8 +172,8 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - Modes loaded dynamically: typescript, go, rust, swift, lua, perl, dockerfile, nginx
 - **Addon dependencies**: simple-mode (needed by Rust), matchbrackets, closebrackets, closetag, show-hint (JS + CSS), anyword-hint, javascript-hint, css-hint, sql-hint, xml-hint, html-hint. Load CSS mode before htmlmixed; load xml-hint before html-hint; load addons before `script.js` initializes the editor.
 - **Hamburger sidebar**: `<aside id="sidePanel">` — glassmorphism panel on right side. Desktop auto-open (pushes editor left), mobile closed by default with overlay
-- **Sidebar controls**: title (maxlength 40), custom key (4-40; spaces auto-replaced with `-`), language selector, description textarea (optional, maxlength 100, multi-line, below language), lock toggle + password + eye icon, auto-delete (value + unit: sec/min/hr/day/week/month), view-once toggle, delete-after-N-views toggle
-- **Navbar**: logo, paste ID + Go (load paste), Save (when sidebar closed), new paste, about, hamburger
+- **Sidebar controls**: title (maxlength 40), custom key (4-40; spaces auto-replaced with `-`), ID prefix `#keyPrefix` (maxlength 15) with `#keyPreview` showing the resulting ID, language selector, description textarea (optional, maxlength 100, multi-line, below language), lock toggle + password + eye icon, auto-delete (value + unit: sec/min/hr/day/week/month), view-once toggle, delete-after-N-views toggle
+- **Navbar**: logo, paste ID + Go (load paste), Save (when sidebar closed), prefix search `#prefixSearchBtn`, new paste (`target="_blank"`, opens a new tab), about, hamburger
 - **Save button**: also at sidebar bottom when open; spinner + disabled during save
 - **Editor controls/status**: `#languageStatus` announces detected/selected language or loading failures; `#editorHelp` explains completions; labeled native `#wordWrap` checkbox below the language selector is checked by default. Live highlighting is the pre-save preview.
 - **About modal**: feature list + keyboard shortcuts (`kbd-hint` styles); Ctrl+Shift+/ opens it in the editor, Esc closes. Ctrl+/ is reserved for toggling comments inside CodeMirror.
@@ -174,7 +182,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 ### `templates/paste.html`
 - highlight.js 11 CDN (monokai theme)
 - Paste content injected via JS: `codeBlock.textContent = {{ paste | tojson }}` — XSS safe, preserves raw characters
-- **Navbar layout**: left = logo + MST Bin + language badge + paste key; absolute-centered title (mobile gets a secondary centered row); right = paste ID nav, copy/share, views, new paste, info flyout toggle, about
+- **Navbar layout**: left = logo + MST Bin + language badge + paste key; absolute-centered title (mobile gets a secondary centered row); right = paste ID nav, copy/share, views, prefix search `#prefixSearchBtn`, new paste (`target="_blank"`), info flyout toggle, about
 - **Info flyout** (`#infoPanel`): toggleable right panel — title, description (if set), paste ID, language, views (/ max), created, expiry, badges (password / view-once / max views / encryption). Toggle via list icon button or Ctrl+I; Esc / overlay closes
 - Custom line numbers (`#lineNumbers`) synced with pasteContent scroll
 - **Password modal**: glassmorphism overlay with blur backdrop, password input with eye toggle, POST to `/api/access/<key>`; copy/share buttons un-hide after unlock
@@ -230,6 +238,16 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - **Custom key**: live input replaces whitespace with `-`; regex `^[a-zA-Z0-9_-]{4,40}$` after normalization; password still rejects spaces
 - **Sidebar responsive**: auto-opens on desktop (>=640px), closed on mobile, overlay backdrop on mobile
 - **`viewportMargin: 100`** (not Infinity) for performance with large pastes
+- **ID prefix**: `PREFIX_RE` `^[a-zA-Z0-9-]{1,15}$`; `normalizePrefix()` mirrors the server; live input replaces whitespace with `-` and updates `#keyPreview` (`ID: prefix_<random>` or `prefix_customkey`); sends `prefix` in the POST body
+- **Post-save redirect**: always plain `result.url` (no query string); the server-side session record decides whether the creator's first view is counted
+
+### `public/js/prefix-search.js`
+- Loaded by both `index.html` and `paste.html` after their own scripts; no-op if `#prefixSearchBtn` is missing
+- Builds `#prefixSearchModal` at runtime (static markup only); results are built with `textContent`/`createElement`, never HTML from data
+- Debounced (300 ms) live search plus submit; `requestSeq` + `AbortController` drop stale responses
+- Prefills from the current paste ID (`<prefix>_...`) or the last searched prefix (`localStorage` key `mstbin:lastPrefix`, wrapped in try/catch)
+- Results are `<a href="/<key>">` rows: key, language, badges (password, view-once, max views, encrypted), title, description, created, views, expiry; view-once rows warn that opening uses the single view
+- Esc is handled in the capture phase with `stopImmediatePropagation()` so it closes only this modal; focus returns to the search button
 
 ### `public/js/admin.js`
 - **Pagination state**: `currentPage`, `currentSortBy`, `currentSortOrder`, `currentSearch`, `currentLanguage`, `currentEncryption`, `perPage`
@@ -329,13 +347,15 @@ node --check public/js/admin.js
 2. **Static base URL** — Controlled by `USE_CDN_STATIC`, not `FLASK_ENV`. When `USE_CDN_STATIC=true`, `static_base_url` is `STATIC_BASE_URL` (S3/CDN) and Flask does not serve `public/`. When `false`, `static_base_url` is `""` so templates resolve to relative `/css/...` paths; Flask serves `public/` locally/Docker, and on Vercel `public/**` is published via `@vercel/static` (`/css`, `/js`, `/img` routes in `vercel.json`). Templates should always use `{{ static_base_url }}/css/styles.css` not hardcoded paths.
 3. **CDN scripts are in templates** — Not in the `public/` folder. CodeMirror, highlight.js, Tailwind, Bootstrap, Chart.js, Font Awesome are loaded from CDNs. No SRI hashes (caused issues with jsdelivr).
 4. **MongoDB document shape**: `{key, data, heading, language, created_at (epoch int), ip_address, open_count, description?, password_hash?, encrypted_with?, expires_at?, view_once?, max_views?}`. `key` is indexed as unique. `heading` max 40 chars. `description` optional, max 100 chars, only stored when non-empty. `password_hash` only present when password was set. `encrypted_with` is `"server"` (ENCRYPTION_KEY), `"password"` (user password), or absent (plaintext).
-5. **Scheduler runs in production** — `scheduler.start()` is called both in `__main__` block and at module level. Under Gunicorn, the module-level call ensures the scheduler starts. Cleans: low-view old pastes + expired by time + viewed-once pastes.
+5. **Scheduler runs in production** — `scheduler.start()` is called both in `__main__` block and at module level. Under Gunicorn, the module-level call starts the scheduler in each worker, and the `scheduler_locks` claim keeps cleanup to one run per cycle. Cleans: low-view old pastes + expired by time + viewed-once + max-views reached.
 6. **No migration needed** — Old pastes without `language` default to `"plaintext"` in GetPaste; pastes without `description` simply omit it (flyout hides the field).
 7. **Ctrl+A on paste page** — Intercepted at document level but only triggers when focus is on/near the paste content area.
 8. **Admin panel uses Bootstrap** — Not Tailwind. The admin panel (`admin.html`, `admin_login.html`) uses Bootstrap 5.3 for layout and components, with custom dark purple CSS in `admin.css`. The main app uses Tailwind.
 9. **Admin auth is session-based** — Uses Flask's built-in session (cookie-signed with SECRET_KEY). No JWT. Session timeout is 8 hours. Logout is POST-only (not GET) to prevent CSRF logout.
-10. **Encryption** — Fernet (AES-256-CBC + HMAC-SHA256). Key derived via SHA-256 of the secret. Password-protected pastes use user password as encryption key. Server-encrypted pastes use ENCRYPTION_KEY. Fernet instances are cached for performance.
+10. **Encryption** — Fernet (AES-128-CBC + HMAC-SHA256; the 32-byte SHA-256 digest of the secret is split into signing and encryption keys). Password-protected pastes use the user password as encryption key. Server-encrypted pastes use ENCRYPTION_KEY via the startup-built `SERVER_FERNET`. Password-derived instances are not cached.
 11. **Reserved routes** — `GetPaste` skips keys `admin`, `api`, `health` to prevent route shadowing.
 12. **Error handling** — `request.get_json(silent=True) or {}` prevents AttributeError on malformed JSON. `PyMongoError` handler returns 503. Decryption failures return placeholder text (not raw exception).
 13. **Keyboard shortcuts** — Documented in About modals: Ctrl+S save, Ctrl+N new paste; editor Ctrl+Shift+K delete line, Ctrl+/ toggle comment, Ctrl+Shift+/ About; viewer Ctrl+/ About, Ctrl+Shift+C copy, Ctrl+I paste info; Esc close modals/panels, `/` focus paste ID. Do not use Ctrl+Shift+I (browser DevTools).
-14. **Custom key / title limits** — Custom key: spaces/whitespace auto-replaced with `-`, then must match `^[a-zA-Z0-9_-]{4,40}$` (client + server). Title truncated to 40 chars. Description truncated to 100 chars. Load-paste ID inputs also normalize spaces→`-`.
+14. **Custom key / title limits** — Custom key: spaces/whitespace auto-replaced with `-`, then must match `^[a-zA-Z0-9_-]{4,40}$` (client + server). Prefix: 1-15 of `[a-zA-Z0-9-]` (no `_`, it is the separator), trailing `_` stripped. Stored keys can be up to 56 chars. Title truncated to 40 chars. Description truncated to 100 chars. Load-paste ID inputs also normalize spaces→`-`.
+15. **Prefix search is public** — anyone who knows or guesses a prefix sees titles, descriptions and dates of its pastes (never content). Treat prefixes as labels, not secrets. There is no rate limiting on `/api/search`.
+16. **New paste `+` icon opens a new tab** — both navbars use `target="_blank" rel="noopener"`. The logo and Ctrl+N still navigate in the same tab.

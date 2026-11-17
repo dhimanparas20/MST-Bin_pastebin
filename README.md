@@ -5,11 +5,11 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 ## Screenshots
 
 ### Homepage
-![Homepage](static/img/ss1.png)
+![Homepage](public/img/ss1.png)
 *Homepage with dark violet gradient, CodeMirror syntax-highlighted editor, and sidebar controls*
 
 ### Paste View
-![Paste View](static/img/ss2.png)
+![Paste View](public/img/ss2.png)
 *Individual paste view with highlight.js syntax coloring*
 
 ## Features
@@ -21,12 +21,15 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 - **Editor assistance** — live language-aware indentation, matching/auto-closing brackets, HTML/XML tag closing, and autocomplete (Ctrl+Space; suggestions vary by language)
 - **Word wrap** — enabled by default; toggle it in the editor sidebar
 - **Custom paste keys** — choose your own memorable key (4-40 chars, optional; spaces auto-converted to `-`)
+- **ID prefixes** — optional prefix (1-15 chars: letters, digits, `-`) gives IDs like `premagic_Ab12Cd`; combined with a custom key it becomes `premagic_my-key`. The sidebar previews the resulting ID
+- **Prefix search** — search icon in the navbar (editor and viewer) lists live pastes whose ID starts with `<prefix>_` (case-insensitive, newest 50): ID, title, description, language, created date, views, expiry and lock/view-once/encryption badges. Click a result to open it. Paste content is never returned, and searching does not count a view
 - **Title & description** — title up to 40 chars; optional multi-line description up to 100 chars (textarea below language)
 - **Password-protected pastes** — lock pastes with a password, viewer must enter password via glassmorphism modal
 - **Auto-delete** — set expiry in seconds to months, lazy deletion on access
-- **View-once pastes** — paste auto-deletes after first view, "VIEW ONCE" warning shown
+- **View-once pastes** — paste auto-deletes after first view, "VIEW ONCE" warning shown; the creator's redirect after saving is not counted as a view
 - **Delete after N views** — set a max view count, paste auto-deletes after N views
 - **Load paste by ID** — paste ID + Go in the top navbar on editor and viewer pages (`/` focuses the input)
+- **New paste button** — the `+` icon in the navbar opens a new editor in a new tab (Ctrl+N still opens it in the same tab)
 - **Language selector** — 25+ languages (Python, JS, Go, Rust, SQL, YAML, Dockerfile, etc.)
 - **Responsive hamburger sidebar** — all settings in a right-side panel, auto-open on desktop, drawer on mobile
 - **Paste info flyout** — on paste view, toggleable right panel with title, description, ID, language, views, expiry, lock/view-once badges
@@ -64,10 +67,10 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 - **Admin password** — constant-time comparison via `hmac.compare_digest`
 - **Security headers** — X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy, HSTS (prod)
 - **MongoDB indexes** — unique index on `key`, indexes on `created_at`, `open_count`
-- **Input validation** — heading max 40 chars, description max 100 chars, custom key 4-40, language whitelist, regex-escaped search, pagination bounds
-- **Rate limiting protection** — admin login failure logging, key generation max retries
+- **Input validation** — heading max 40 chars, description max 100 chars, custom key 4-40, prefix 1-15 (no `_`), language whitelist, regex-escaped search, pagination bounds
+- **Abuse logging** — failed admin logins are logged with the client IP (no login rate limiting yet); key generation gives up after 10 collisions
 - **Health check** — `GET /health` endpoint for monitoring
-- **AES-256 encryption** — server-side encryption at rest, password-protected pastes use user password as key
+- **Encryption at rest** — Fernet (AES-128-CBC + HMAC-SHA256, key derived from SHA-256 of the secret); server key from `ENCRYPTION_KEY`, password-protected pastes use the user password as key
 - **Gzip compression** — on all HTML/JSON responses > 500 bytes
 - **Structured logging** — Python logging module with timestamps and levels
 
@@ -87,7 +90,8 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 
 ## Prerequisites
 
-- Python 3.8+
+- Python 3.14+ (see `.python-version`)
+- [uv](https://docs.astral.sh/uv/)
 - MongoDB
 - Docker (optional)
 
@@ -115,7 +119,7 @@ ADMIN_PASSWORD=change-me-to-a-strong-password
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MONGO_CONNECTION_STRING` | — | MongoDB connection URI (**required**) |
+| `MONGO_CONNECTION_STRING` | `mongodb://localhost:27017` | MongoDB connection URI (startup fails if set to an empty string) |
 | `MONGO_DB_NAME` | `pastebin` | Database name |
 | `MONGO_COLLECTION_NAME` | `pastes` | Collection name |
 | `KEY_LENGTH` | `6` | Length of generated paste keys |
@@ -124,7 +128,7 @@ ADMIN_PASSWORD=change-me-to-a-strong-password
 | `FLASK_PORT` | `5000` | Server port |
 | `FLASK_HOST` | `0.0.0.0` | Server bind address |
 | `SECRET_KEY` | — | Flask session secret (**required in prod**) |
-| `ENCRYPTION_KEY` | — | AES-256 server-side encryption key |
+| `ENCRYPTION_KEY` | — | Server-side encryption secret (pastes stored in plaintext when unset) |
 | `FLASK_ENV` | `dev` | `dev` or `prod` (SECRET_KEY, secure cookies, HSTS) |
 | `USE_CDN_STATIC` | `false` | `true` = load CSS/JS/img from `STATIC_BASE_URL` |
 | `STATIC_BASE_URL` | _(empty)_ | S3/CDN origin (only used when `USE_CDN_STATIC=true`) |
@@ -154,7 +158,9 @@ uv run python app.py
 docker compose up -d
 ```
 
-Exposes on port 80 → internal 5000 via Gunicorn (4 workers).
+Exposes port 5000 (host) → 5000 (container) via Gunicorn (4 workers, `GUNICORN_WORKERS`). The compose file sets `GUNICORN_RELOAD=true`; the image default is `false`. The container healthcheck calls `GET /health`, so it reports unhealthy when MongoDB is unreachable.
+
+The weekly cleanup job runs in every Gunicorn worker, but only one worker per cycle does the work: workers claim the run through a document in the `scheduler_locks` collection.
 
 ### Vercel
 
@@ -169,7 +175,8 @@ Exposes on port 80 → internal 5000 via Gunicorn (4 workers).
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/` | Editor homepage |
-| `POST` | `/api/save` | Save a paste. Body: `{data, heading, language, description?, custom_key?, password?, expiry_value?, expiry_unit?, view_once?, max_views?}` |
+| `POST` | `/api/save` | Save a paste. Body: `{data, heading, language, description?, custom_key?, prefix?, password?, expiry_value?, expiry_unit?, view_once?, max_views?}`. Key is `prefix_custom_key`, `prefix_<random>`, `custom_key` or `<random>` |
+| `GET` | `/api/search?prefix=<p>` | Public prefix search. Returns `{prefix, results[], total, limit}`; each result has key, heading, description, language, created_at, expires_at, expires_text, open_count, max_views, view_once, password_protected, encrypted_with. Excludes expired/consumed pastes; never returns content or IP |
 | `GET` | `/<key>` | View a paste. If locked shows password modal. If expired/viewed-once shows 404 |
 | `POST` | `/api/access/<key>` | Unlock a protected paste `{password}`. Returns paste data or 403 |
 | `GET` | `/health` | Health check (returns MongoDB ping status) |
@@ -184,6 +191,6 @@ Exposes on port 80 → internal 5000 via Gunicorn (4 workers).
 | `GET` | `/api/admin/pastes` | List pastes (paginated, searchable, filterable) |
 | `GET` | `/api/admin/paste/<key>` | Paste detail (decrypts server-encrypted pastes) |
 | `DELETE` | `/api/admin/paste/<key>` | Delete a paste |
-| `DELETE` | `/api/admin/pastes` | Batch delete. Body: `{keys: ["id1", "id2", ...]}` (max 100) |
+| `DELETE` | `/api/admin/pastes` | Batch delete. Body: `{keys: ["id1", "id2", ...]}` (max 100, keys up to 56 chars) |
 | `DELETE` | `/api/admin/delete-expired` | Delete all expired/view-once/max-views pastes |
 | `GET` | `/api/admin/analytics` | Dashboard analytics data |

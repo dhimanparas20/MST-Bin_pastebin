@@ -5,6 +5,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const languageStatus = document.getElementById("languageStatus")
   const wordWrap = document.getElementById("wordWrap")
   const customKeyInput = document.getElementById("customKey")
+  const keyPrefixInput = document.getElementById("keyPrefix")
+  const keyPreview = document.getElementById("keyPreview")
   const navPasteKey = document.getElementById("navPasteKey")
   const navPasteGo = document.getElementById("navPasteGo")
   const pastePassword = document.getElementById("pastePassword")
@@ -358,6 +360,39 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   })
 
+  // ===== ID PREFIX =====
+  // "_" is the separator, so prefixes allow only letters, digits and "-".
+  const PREFIX_RE = /^[a-zA-Z0-9-]{1,15}$/
+  const normalizePrefix = (value) => value.trim().replace(/\s+/g, "-").replace(/_+$/, "")
+
+  function updateKeyPreview() {
+    const prefix = normalizePrefix(keyPrefixInput.value)
+    const customKey = customKeyInput.value.trim().replace(/\s+/g, "-")
+    if (!prefix) {
+      keyPreview.classList.add("hidden")
+      return
+    }
+    keyPreview.classList.remove("hidden")
+    if (!PREFIX_RE.test(prefix)) {
+      keyPreview.textContent = "Use letters, numbers or - (max 15)."
+      keyPreview.classList.add("text-red-400")
+      return
+    }
+    keyPreview.classList.remove("text-red-400")
+    keyPreview.textContent = `ID: ${prefix}_${customKey || "<random>"}`
+  }
+
+  keyPrefixInput.addEventListener("input", () => {
+    const start = keyPrefixInput.selectionStart
+    const after = keyPrefixInput.value.replace(/\s+/g, "-")
+    if (after !== keyPrefixInput.value) {
+      keyPrefixInput.value = after
+      keyPrefixInput.setSelectionRange(start, start)
+    }
+    updateKeyPreview()
+  })
+  customKeyInput.addEventListener("input", updateKeyPreview)
+
   // ===== SPACE VALIDATION HELPER =====
   function hasSpaces(val) { return val.includes(" ") }
 
@@ -371,6 +406,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let heading = headingInput.value.trim().slice(0, 40)
     const description = (descriptionInput ? descriptionInput.value.trim() : "").slice(0, 100)
     let customKey = customKeyInput.value.trim()
+    const prefix = normalizePrefix(keyPrefixInput.value)
 
     if (!data.trim()) { alert("Please enter some text before saving."); return }
     if (!heading) heading = "My Paste"
@@ -380,12 +416,14 @@ document.addEventListener("DOMContentLoaded", () => {
       customKeyInput.value = customKey
       if (!/^[a-zA-Z0-9_-]{4,40}$/.test(customKey)) { alert("Custom key must be 4-40 characters (a-z, A-Z, 0-9, -, _)"); return }
     }
+    if (prefix && !PREFIX_RE.test(prefix)) { alert("Prefix must be 1-15 characters (a-z, A-Z, 0-9, -)"); return }
 
     let lang = currentLanguage
     if (lang === "auto") { const detected = detectLanguage(data); lang = detected || "plaintext" }
 
     const body = { data, heading, language: lang }
     if (customKey) body.custom_key = customKey
+    if (prefix) body.prefix = prefix
     if (description) body.description = description
 
     if (isLocked) {
@@ -426,11 +464,9 @@ document.addEventListener("DOMContentLoaded", () => {
       .then((response) => response.json())
       .then((result) => {
         if (result.url) {
-          if (isViewOnce || isMaxViewsOn) {
-            window.location.href = result.url + "?new=1"
-          } else {
-            window.location.href = result.url
-          }
+          // The server remembers this browser created the paste, so the
+          // redirect does not count as a view.
+          window.location.href = result.url
         } else {
           isSaving = false
           saveBtnSide.innerHTML = originalSideText
