@@ -182,7 +182,7 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 ### `templates/paste.html`
 - highlight.js 11 CDN (monokai theme)
 - Paste content injected via JS: `codeBlock.textContent = {{ paste | tojson }}` — XSS safe, preserves raw characters
-- **Navbar layout**: left = logo + MST Bin + language badge + paste key; absolute-centered title (mobile gets a secondary centered row); right = paste ID nav, copy/share, views, prefix search `#prefixSearchBtn`, new paste (`target="_blank"`), info flyout toggle, about
+- **Navbar layout**: left = logo + MST Bin + language badge + paste key; title as a flex item between the groups (≥900px; truncates instead of overlapping), or on its own `.paste-nav-subtitle` row below 900px where the controls wrap onto a second row; right = paste ID nav, copy/share, views, prefix search `#prefixSearchBtn`, new paste (`target="_blank"`), info flyout toggle, about
 - **Info flyout** (`#infoPanel`): toggleable right panel — title, description (if set), paste ID, language, views (/ max), created, expiry, badges (password / view-once / max views / encryption). Toggle via list icon button or Ctrl+I; Esc / overlay closes
 - Custom line numbers (`#lineNumbers`) synced with pasteContent scroll
 - **Password modal**: glassmorphism overlay with blur backdrop, password input with eye toggle, POST to `/api/access/<key>`; copy/share buttons un-hide after unlock
@@ -266,19 +266,22 @@ MST Bin is a pastebin web app: users paste text/code, get a shareable link. Flas
 - **`showToast(title, message, type)`**: Bootstrap toast notifications
 
 ### `public/css/styles.css`
-- **Dark violet gradient body**: `#08000f` base with 3 radial purple glows + `bgPulse` animation (12s alternate)
-- CodeMirror overrides: dark purple `#07000d` background, `#0a0014` gutters, monospace font
-- CodeMirror selection: blue tint when focused, white tint otherwise
+- **Theme tokens on `:root`**: palette (`--violet-*`, `--fuchsia-*`, `--indigo-600`), `--bar-gradient` (shared by navbar, sidebar, footer), `--accent-line`, `--board-tint`, `--gutter-tint`, `--gradient-speed`. Change colours here, not in individual rules
+- **Aurora**: `<div class="aurora">` with three `<span>` blobs is the first child of `<body>` in `index.html` and `paste.html`; fixed, `z-index: -1`, radial gradients animated with `transform` only (`auroraDriftA/B/C`). Third blob hidden ≤640px
+- **Bars**: `.glassmorphism` (navbar, footer, view-once banner) and `.glassmorphism-sidebar` use `--bar-gradient` with `barGradientShift`; `#navbar::after` is the sliding accent line. Sidebar/navbar `.bg-gray-800` inputs are restyled translucent violet; Save buttons (`#saveBtnTop`, `#saveBtnSide`) get an animated violet→fuchsia gradient
+- **Code board**: CodeMirror and `#pasteContent` use `--board-tint` (translucent, so the aurora shows through); `.hljs` background is transparent; gutters/line numbers use `--gutter-tint`; fuchsia glowing cursor; violet selection; focus inner glow; `boardFadeIn` (opacity only, so CodeMirror measurements are unaffected)
+- **Editor layout**: `body.editor-page` is locked to `100dvh` with `overflow: hidden`; `#editorContainer` is `flex: 1 1 auto; min-height: 0` so the board fills the screen and CodeMirror scrolls internally. `#mainContent` and `footer` use `width: auto` (overriding Tailwind `w-full`) so the sidebar's `margin-right` (set by `script.js` on both) shrinks them instead of pushing them under the sidebar
+- **Responsive**: viewer navbar wraps to two rows below 900px; editor navbar hides the "MST" label and tightens spacing ≤400px so the menu button stays visible at 320px
+- **`prefers-reduced-motion`**: disables aurora, gradient shifts, accent line, board fade-in and hover lifts
 - Completion menu overrides target `.CodeMirror-hints.monokai`, with a dark violet background and purple active row. The editor flex child uses `min-width: 0` so wrapped long lines fit the available width.
-- highlight.js overrides: dark purple `#07000d` background, monokai color palette
+- highlight.js overrides: transparent background over `--board-tint`, monokai color palette
 - Modal glassmorphism: `backdrop-filter: blur(16px)`, purple-tinted semi-transparent bg, box shadow
-- Sidebar glassmorphism: dark purple bg, blur, border-left (right-side panel)
-- Glassmorphism navbar/footer: `rgba(20,10,35,0.4)` with blur(10px)
 - Paste not found `fadeInUp` animation
 - Sidebar scrollbar custom styling
 - `.kbd-hint` styles for keyboard shortcut chips in About modal
 - `#infoPanel` scrollbar (same pattern as `#sidePanel`)
-- All responsive breakpoints at 640px and 768px
+- Responsive breakpoints: 400px (editor navbar), 640px (mobile typography, sidebar drawer), 768px, 900px (viewer navbar rows)
+- Browser checks of animated pages: the in-app preview pane may not advance CSS transitions/animations, so freeze them (`*{transition:none!important;animation-duration:0s!important}`) before measuring or screenshotting layout
 
 ### `public/css/admin.css`
 - Dark purple theme matching main app: `#0a0515` base

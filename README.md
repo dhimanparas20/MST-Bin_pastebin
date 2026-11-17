@@ -15,7 +15,8 @@ MST Bin is a modern, feature-rich pastebin clone that allows users to share text
 ## Features
 
 ### Editor & Paste
-- Dark violet gradient theme with animated glassmorphism background
+- **Animated violet theme** — drifting "aurora" glows behind a translucent code board; navbar, sidebar and footer share one slowly shifting purple gradient with a shimmering accent line; gradient Save button. Motion is disabled when the OS "reduce motion" setting is on
+- **Full-height editor** — the board fills the space between navbar and footer and scrolls internally; layout tested from 320px phones to wide desktops
 - **Live syntax highlighting** — colors update while typing or pasting, before saving (CodeMirror 5 + monokai theme)
 - **Continuous auto language detection** — Auto Detect stays selected as content changes; the detected language appears separately below the selector
 - **Editor assistance** — live language-aware indentation, matching/auto-closing brackets, HTML/XML tag closing, and autocomplete (Ctrl+Space; suggestions vary by language)

@@ -1,43 +1,236 @@
-body {
-  font-family: "Courier New", monospace;
-  color: #c8b8e8;
-  background: #08000f;
-  background-image:
-    radial-gradient(ellipse at 20% 50%, rgba(80, 0, 130, 0.12) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 20%, rgba(50, 0, 100, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 90%, rgba(30, 0, 70, 0.10) 0%, transparent 50%);
-  background-attachment: fixed;
-  animation: bgPulse 12s ease-in-out infinite alternate;
+/* ===== Theme tokens =====
+   One palette drives the navbar, sidebar, footer and code board so they read as
+   a single surface. Tweak colours here rather than in individual rules. */
+:root {
+  --bg-base: #0b0217;
+  --violet-950: #1a0636;
+  --violet-900: #2e0b5c;
+  --violet-800: #4c1d95;
+  --violet-600: #7c3aed;
+  --violet-400: #a78bfa;
+  --fuchsia-600: #c026d3;
+  --fuchsia-400: #e879f9;
+  --indigo-600: #4f46e5;
+  --text-soft: #d8c8f5;
+
+  /* Shared bar gradient (navbar, sidebar, footer). */
+  --bar-gradient: linear-gradient(115deg,
+      rgba(26, 6, 54, 0.94) 0%,
+      rgba(58, 14, 110, 0.92) 30%,
+      rgba(96, 22, 140, 0.90) 50%,
+      rgba(46, 16, 101, 0.92) 70%,
+      rgba(26, 6, 54, 0.94) 100%);
+  --accent-line: linear-gradient(90deg,
+      transparent, var(--violet-600), var(--fuchsia-400), var(--indigo-600), transparent);
+  --board-tint: rgba(12, 3, 28, 0.58);
+  --gutter-tint: rgba(28, 8, 56, 0.55);
+  --gradient-speed: 18s;
 }
 
-@keyframes bgPulse {
-  0% {
-    background-image:
-      radial-gradient(ellipse at 20% 50%, rgba(80, 0, 130, 0.12) 0%, transparent 60%),
-      radial-gradient(ellipse at 80% 20%, rgba(50, 0, 100, 0.08) 0%, transparent 50%),
-      radial-gradient(ellipse at 50% 90%, rgba(30, 0, 70, 0.10) 0%, transparent 50%);
-  }
-  100% {
-    background-image:
-      radial-gradient(ellipse at 70% 40%, rgba(80, 0, 130, 0.14) 0%, transparent 60%),
-      radial-gradient(ellipse at 30% 80%, rgba(50, 0, 100, 0.06) 0%, transparent 50%),
-      radial-gradient(ellipse at 50% 10%, rgba(40, 0, 80, 0.10) 0%, transparent 50%);
-  }
+body {
+  font-family: "Courier New", monospace;
+  color: var(--text-soft);
+  background: var(--bg-base);
+  background-image: linear-gradient(160deg, #0b0217 0%, #150431 55%, #0b0217 100%);
+  background-attachment: fixed;
+}
+
+/* ===== Aurora background =====
+   Fixed layer behind everything; the code board is translucent so the slowly
+   drifting glows show through. Only transforms animate (GPU-friendly). */
+.aurora {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.aurora span {
+  position: absolute;
+  border-radius: 50%;
+  will-change: transform;
+}
+
+.aurora span:nth-child(1) {
+  width: 70vmax;
+  height: 70vmax;
+  top: -25vmax;
+  left: -20vmax;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.42) 0%, rgba(124, 58, 237, 0) 65%);
+  animation: auroraDriftA 26s ease-in-out infinite alternate;
+}
+
+.aurora span:nth-child(2) {
+  width: 60vmax;
+  height: 60vmax;
+  bottom: -25vmax;
+  right: -15vmax;
+  background: radial-gradient(circle, rgba(192, 38, 211, 0.32) 0%, rgba(192, 38, 211, 0) 65%);
+  animation: auroraDriftB 32s ease-in-out infinite alternate;
+}
+
+.aurora span:nth-child(3) {
+  width: 50vmax;
+  height: 50vmax;
+  top: 25%;
+  left: 35%;
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.28) 0%, rgba(79, 70, 229, 0) 65%);
+  animation: auroraDriftC 22s ease-in-out infinite alternate;
+}
+
+@keyframes auroraDriftA {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(18vw, 12vh) scale(1.15); }
+  100% { transform: translate(8vw, 30vh) scale(0.95); }
+}
+
+@keyframes auroraDriftB {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(-20vw, -10vh) scale(1.1); }
+  100% { transform: translate(-6vw, -28vh) scale(1.2); }
+}
+
+@keyframes auroraDriftC {
+  0%   { transform: translate(0, 0) scale(0.9); }
+  50%  { transform: translate(-15vw, 10vh) scale(1.15); }
+  100% { transform: translate(12vw, -12vh) scale(1); }
+}
+
+/* ===== Gradient bars: navbar, footer, sidebars ===== */
+@keyframes barGradientShift {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+@keyframes accentSlide {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 .glassmorphism {
-  background: rgba(20, 10, 35, 0.4);
+  background: var(--bar-gradient);
+  background-size: 300% 300%;
+  animation: barGradientShift var(--gradient-speed) ease-in-out infinite alternate;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(167, 139, 250, 0.18);
+  box-shadow: 0 4px 24px rgba(10, 0, 30, 0.45);
 }
 
-/* Slide-in sidebar (right side) */
+/* Shimmering accent line under the navbar */
+#navbar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--accent-line);
+  background-size: 200% 100%;
+  animation: accentSlide 6s linear infinite;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+/* Slide-in sidebar (right side) — same palette, vertical sweep */
 .glassmorphism-sidebar {
-  background: rgba(8, 2, 18, 0.97);
+  background: var(--bar-gradient);
+  background-size: 300% 300%;
+  animation: barGradientShift var(--gradient-speed) ease-in-out infinite alternate;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 1px solid rgba(167, 139, 250, 0.22);
+  box-shadow: -6px 0 28px rgba(10, 0, 30, 0.5);
+}
+
+/* Form controls inside the bars: translucent violet instead of flat grey */
+.glassmorphism-sidebar .bg-gray-800,
+#navbar .bg-gray-800 {
+  background-color: rgba(20, 6, 44, 0.65);
+  border: 1px solid rgba(167, 139, 250, 0.22);
+  transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+
+.glassmorphism-sidebar .bg-gray-800:hover,
+#navbar .bg-gray-800:hover {
+  border-color: rgba(167, 139, 250, 0.45);
+}
+
+.glassmorphism-sidebar .bg-gray-800:focus,
+#navbar .bg-gray-800:focus {
+  background-color: rgba(30, 10, 62, 0.85);
+  border-color: transparent;
+}
+
+.glassmorphism-sidebar input::placeholder,
+.glassmorphism-sidebar textarea::placeholder,
+#navbar input::placeholder {
+  color: rgba(216, 200, 245, 0.45);
+}
+
+.glassmorphism-sidebar select option {
+  background: var(--violet-950);
+}
+
+.glassmorphism-sidebar hr,
+.glassmorphism-sidebar .border-gray-700 {
+  border-color: rgba(167, 139, 250, 0.2);
+}
+
+.glassmorphism-sidebar input[type="checkbox"] {
+  accent-color: var(--violet-600);
+}
+
+/* Toggle rows in the sidebar get a soft hover pill */
+.glassmorphism-sidebar button.group {
+  border-radius: 0.5rem;
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+  transition: background-color 0.2s;
+}
+
+.glassmorphism-sidebar button.group:hover {
+  background-color: rgba(167, 139, 250, 0.1);
+}
+
+/* Navbar icon buttons lift slightly on hover */
+#navbar button svg,
+#navbar a svg {
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+#navbar button:hover svg,
+#navbar a:hover svg {
+  transform: translateY(-1px) scale(1.08);
+  filter: drop-shadow(0 0 6px rgba(232, 121, 249, 0.55));
+}
+
+/* Primary Save buttons: animated violet→fuchsia gradient */
+#saveBtnTop,
+#saveBtnSide {
+  background: linear-gradient(110deg, var(--violet-600), var(--fuchsia-600), var(--indigo-600), var(--violet-600));
+  background-size: 300% 100%;
+  animation: barGradientShift 8s linear infinite alternate;
+  box-shadow: 0 2px 14px rgba(192, 38, 211, 0.35);
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+#saveBtnTop:hover,
+#saveBtnSide:hover {
+  box-shadow: 0 4px 22px rgba(232, 121, 249, 0.55);
+  transform: translateY(-1px);
+}
+
+#saveBtnTop:active,
+#saveBtnSide:active {
+  transform: translateY(0);
+}
+
+#saveBtnTop:disabled,
+#saveBtnSide:disabled {
+  opacity: 0.7;
+  transform: none;
 }
 
 /* Password modal */
@@ -53,38 +246,84 @@ body {
   font-family: "Courier New", monospace;
 }
 
+/* ===== Code board (editor + viewer) =====
+   Translucent tint over the aurora keeps code readable while the colour moves. */
+@keyframes boardFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+#editorContainer,
+main:not(.not-found-main) > div {
+  animation: boardFadeIn 0.6s ease-out both;
+}
+
 /* CodeMirror overrides */
 .CodeMirror {
   height: 100% !important;
-  background: #07000d !important;
+  background: var(--board-tint) !important;
   font-family: "Courier New", monospace !important;
   font-size: 14px;
   line-height: 1.5;
+  transition: box-shadow 0.3s ease;
+}
+
+.CodeMirror-focused {
+  box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.28), inset 0 0 40px rgba(124, 58, 237, 0.12);
 }
 
 .CodeMirror-gutters {
-  background: #0a0014 !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+  background: var(--gutter-tint) !important;
+  border-right: 1px solid rgba(167, 139, 250, 0.18) !important;
 }
 
 .CodeMirror-linenumber {
-  color: #665588 !important;
+  color: #8b74c4 !important;
 }
 
 .CodeMirror-cursor {
-  border-left: 2px solid #fff !important;
+  border-left: 2px solid var(--fuchsia-400) !important;
+  box-shadow: 0 0 6px rgba(232, 121, 249, 0.8);
 }
 
 .CodeMirror-selected {
-  background: rgba(255, 255, 255, 0.15) !important;
+  background: rgba(167, 139, 250, 0.18) !important;
 }
 
 .CodeMirror-focused .CodeMirror-selected {
-  background: rgba(100, 150, 255, 0.3) !important;
+  background: rgba(192, 38, 211, 0.3) !important;
 }
 
-.CodeMirror-scrollbar-filler {
-  background: #07000d !important;
+.CodeMirror-matchingbracket {
+  color: #fff !important;
+  background: rgba(232, 121, 249, 0.3);
+  border-radius: 2px;
+}
+
+.CodeMirror-scrollbar-filler,
+.CodeMirror-gutter-filler {
+  background: transparent !important;
+}
+
+/* Board scrollbars */
+.CodeMirror-vscrollbar::-webkit-scrollbar,
+.CodeMirror-hscrollbar::-webkit-scrollbar,
+#pasteContent::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.CodeMirror-vscrollbar::-webkit-scrollbar-thumb,
+.CodeMirror-hscrollbar::-webkit-scrollbar-thumb,
+#pasteContent::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(124, 58, 237, 0.6), rgba(192, 38, 211, 0.6));
+  border-radius: 4px;
+}
+
+.CodeMirror-vscrollbar::-webkit-scrollbar-track,
+.CodeMirror-hscrollbar::-webkit-scrollbar-track,
+#pasteContent::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .CodeMirror-hints.monokai {
@@ -103,8 +342,32 @@ body {
   color: #f3e8ff;
 }
 
+/* Editor page is locked to the viewport so the board fills the screen and
+   scrolls internally (dvh accounts for mobile browser toolbars). */
+body.editor-page {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* width:auto (not Tailwind's w-full) so the sidebar's margin-right shrinks the
+   board instead of pushing it underneath the sidebar. */
+body.editor-page #mainContent {
+  min-height: 0;
+  width: auto;
+}
+
+body.editor-page footer {
+  width: auto;
+}
+
+/* Fill the space between navbar and footer. A percentage height alone resolves
+   to "auto" inside the flex column, which shrank the board to its content. */
 #editorContainer {
   display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
   height: 100%;
   width: 100%;
 }
@@ -139,10 +402,8 @@ body {
 }
 
 footer {
-  background: rgba(20, 10, 35, 0.4);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(167, 139, 250, 0.18);
+  border-bottom: none;
 }
 
 /* highlight.js overrides for paste view */
@@ -154,11 +415,13 @@ footer {
   word-break: break-word;
   padding: 8px;
   overflow-x: auto;
-  background: #07000d;
+  background: var(--board-tint);
 }
 
 #lineNumbers {
-  background: #0a0014;
+  background: var(--gutter-tint);
+  color: #8b74c4;
+  border-right-color: rgba(167, 139, 250, 0.18);
 }
 
 #pasteContent code.hljs {
@@ -167,8 +430,8 @@ footer {
 }
 
 .hljs {
-  background: #07000d !important;
-  color: #ddd;
+  background: transparent !important;
+  color: #e9e0fb;
 }
 
 .hljs-keyword,
@@ -299,8 +562,9 @@ html {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Main content transitions */
-#mainContent {
+/* Main content transitions (footer follows the board when the sidebar opens) */
+#mainContent,
+body.editor-page footer {
   transition: margin-right 0.3s ease-in-out;
 }
 
@@ -344,6 +608,106 @@ main:not(.not-found-main) > div {
   height: 100%;
   overflow: hidden;
   width: 100%;
+}
+
+/* Small screens: calmer aurora, no hover lift (touch has no hover) */
+/* Viewer navbar title takes the space between the logo/badges and the controls
+   (truncating as needed) rather than being absolutely centred over them. */
+@media (min-width: 900px) {
+  .paste-nav-title {
+    position: static !important;
+    transform: none !important;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: none !important;
+  }
+}
+
+/* Viewer navbar below 900px: logo/badges on row one, controls on row two, title
+   on its own row, instead of the controls running off the right edge. */
+@media (max-width: 899px) {
+  .paste-nav-title {
+    display: none !important;
+  }
+
+  .paste-nav-subtitle {
+    display: block !important;
+  }
+
+  .paste-nav {
+    flex-wrap: wrap;
+    row-gap: 0.4rem;
+  }
+
+  .paste-nav > div:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: nowrap;
+  }
+
+  .paste-nav > div:last-child {
+    flex: 1 1 100%;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .aurora span:nth-child(3) {
+    display: none;
+  }
+
+  #navbar button:hover svg,
+  #navbar a:hover svg {
+    transform: none;
+  }
+}
+
+/* Very narrow phones (≤400px): tighten the editor navbar so the menu button
+   always stays on screen (logo icon only, slimmer paste-ID box, smaller gaps). */
+@media (max-width: 400px) {
+  nav#navbar.h-12 {
+    gap: 0.3rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  nav#navbar.h-12 > a:first-child > span {
+    display: none;
+  }
+
+  nav#navbar.h-12 #navPasteKey {
+    width: 3.25rem;
+  }
+
+  nav#navbar.h-12 #saveBtnTop {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+}
+
+/* Respect the OS "reduce motion" setting: keep the colours, drop the movement */
+@media (prefers-reduced-motion: reduce) {
+  .aurora span,
+  .glassmorphism,
+  .glassmorphism-sidebar,
+  #navbar::after,
+  #saveBtnTop,
+  #saveBtnSide,
+  #editorContainer,
+  main:not(.not-found-main) > div,
+  .animate-fadeIn {
+    animation: none !important;
+  }
+
+  #navbar button:hover svg,
+  #navbar a:hover svg,
+  #saveBtnTop:hover,
+  #saveBtnSide:hover {
+    transform: none;
+  }
 }
 
 /* Line numbers alignment */

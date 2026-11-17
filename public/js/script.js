@@ -22,6 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const sidePanel = document.getElementById("sidePanel")
   const sidebarOverlay = document.getElementById("sidebarOverlay")
   const mainContent = document.getElementById("mainContent")
+  const pageFooter = document.querySelector("footer")
   const saveBtnTop = document.getElementById("saveBtnTop")
   const saveBtnSide = document.getElementById("saveBtnSide")
 
@@ -233,6 +234,7 @@ document.addEventListener("DOMContentLoaded", () => {
       sidebarOverlay.classList.remove("hidden")
     } else {
       mainContent.style.marginRight = "288px"
+      if (pageFooter) pageFooter.style.marginRight = "288px"
     }
     saveBtnTop.classList.add("hidden")
     saveBtnSide.classList.remove("hidden")
@@ -246,6 +248,7 @@ document.addEventListener("DOMContentLoaded", () => {
     hamburgerCloseIcon.classList.add("hidden")
     sidebarOverlay.classList.add("hidden")
     mainContent.style.marginRight = "0"
+    if (pageFooter) pageFooter.style.marginRight = "0"
     saveBtnTop.classList.remove("hidden")
     saveBtnSide.classList.add("hidden")
     scheduleEditorRefresh()
